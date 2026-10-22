@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Firma PDF</string>
+    <string name="home_title">Inicio</string>
+    <string name="sign_pdf_title">Firmar PDF</string>
+    <string name="signed_documents_title">Documentos firmados</string>
+    <string name="history_empty">Todavía no tienes documentos firmados.</string>
+    <string name="history_loading">Cargando documentos firmados…</string>
+    <string name="history_error">No se pudo cargar el historial.</string>
+    <string name="retry">Reintentar</string>
+    <string name="editor_title">Editor</string>
+    <string name="signature_title">Crear firma</string>
+    <string name="back">Volver</string>
+    <string name="open_editor">Ir al editor</string>
+    <string name="home_preparation">La apertura y firma de PDF estarán disponibles en una próxima etapa.</string>
+    <string name="editor_preparation">El visor y la colocación de la firma aún están pendientes.</string>
+    <string name="signature_preparation">El dibujo de la firma aún está pendiente. La firma reutilizable se guardará solo en este dispositivo.</string>
+    <string name="signed_at">Fecha de firma: %1$s</string>
+    <string name="result_new_document">Archivo nuevo</string>
+    <string name="result_updated_source">Original actualizado</string>
+</resources>
