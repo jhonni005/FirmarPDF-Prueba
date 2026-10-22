@@ -1,4 +1,4 @@
-package com.zonadev.firmarpdf.data.history
+package com.zonadev.firmarpdf.data.signedpdf
 
 import androidx.room.Dao
 import androidx.room.Insert

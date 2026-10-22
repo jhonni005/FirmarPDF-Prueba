@@ -1,6 +1,7 @@
-package com.zonadev.firmarpdf.data.history
+package com.zonadev.firmarpdf.data.signedpdf
 
 import android.database.sqlite.SQLiteConstraintException
+import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -14,19 +15,20 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
-class HistoryDatabaseTest {
-    private lateinit var database: HistoryDatabase
-    private lateinit var repository: HistoryRepository
+class SignedPdfDatabaseTest {
+    private lateinit var database: SignedPdfDatabase
+    private lateinit var repository: SignedPdfRepository
 
     @Before
     fun setUp() {
         database = Room.inMemoryDatabaseBuilder(
             InstrumentationRegistry.getInstrumentation().targetContext,
-            HistoryDatabase::class.java,
+            SignedPdfDatabase::class.java,
         ).build()
-        repository = HistoryRepository(database.signedPdfDao())
+        repository = SignedPdfRepository(database.signedPdfDao())
     }
 
     @After
@@ -64,6 +66,35 @@ class HistoryDatabaseTest {
         val results = withTimeout(5_000) { repository.results.first() }
         assertEquals(1, results.size)
         assertEquals(100L, results.single().signedAt)
+    }
+
+    @Test
+    fun renamedDatabaseOpensTheOriginalVersionOneWithoutLosingRows() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val databaseName = "signed_pdf_rename_test_${UUID.randomUUID()}.db"
+        val file = context.getDatabasePath(databaseName)
+        file.parentFile?.mkdirs()
+        try {
+            // SQL y hash del esquema v1 exportado antes del cambio de nombres.
+            SQLiteDatabase.openOrCreateDatabase(file, null).use { old ->
+                old.execSQL("CREATE TABLE signed_pdfs (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, resultUri TEXT NOT NULL, displayName TEXT NOT NULL, signedAt INTEGER NOT NULL, resultKind TEXT NOT NULL)")
+                old.execSQL("CREATE UNIQUE INDEX index_signed_pdfs_resultUri ON signed_pdfs (resultUri)")
+                old.execSQL("CREATE TABLE room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT)")
+                old.execSQL("INSERT INTO room_master_table VALUES (42, '360fc0bb3119eb7704b952858936cada')")
+                old.execSQL("INSERT INTO signed_pdfs VALUES (7, 'content://test.documents/existing', 'existing.pdf', 100, 'NEW_DOCUMENT')")
+                old.version = 1
+            }
+            val reopened = Room.databaseBuilder(context, SignedPdfDatabase::class.java, databaseName).build()
+            try {
+                val existing = withTimeout(5_000) { reopened.signedPdfDao().observeResults().first() }.single()
+                assertEquals(7L, existing.id)
+                assertEquals("existing.pdf", existing.displayName)
+            } finally {
+                reopened.close()
+            }
+        } finally {
+            context.deleteDatabase(databaseName)
+        }
     }
 
     private fun result(name: String, time: Long, kind: ResultKind = ResultKind.NEW_DOCUMENT) =

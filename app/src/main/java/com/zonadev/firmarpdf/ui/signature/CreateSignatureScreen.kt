@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.zonadev.firmarpdf.R
 
 @Composable
-fun SignatureScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun CreateSignatureScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.signature_title), style = MaterialTheme.typography.headlineMedium)
         Text(stringResource(R.string.signature_preparation))

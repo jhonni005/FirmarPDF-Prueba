@@ -10,8 +10,12 @@
     <string name="editor_title">Editor</string>
     <string name="signature_title">Crear firma</string>
     <string name="back">Volver</string>
-    <string name="open_editor">Ir al editor</string>
-    <string name="home_preparation">La apertura y firma de PDF estarán disponibles en una próxima etapa.</string>
+    <string name="selected_pdf_title">PDF seleccionado</string>
+    <string name="pdf_pending_signature">Pendiente de firma</string>
+    <string name="pdf_without_name">PDF sin nombre</string>
+    <string name="selection_checking">Comprobando acceso al PDF…</string>
+    <string name="selection_unreadable">No se pudo leer ese PDF. Pulsa Firmar PDF para seleccionarlo de nuevo o elegir otro archivo.</string>
+    <string name="pdf_picker_unavailable">No se pudo abrir el selector de documentos del sistema. Comprueba que esté disponible y vuelve a intentarlo.</string>
     <string name="editor_preparation">El visor y la colocación de la firma aún están pendientes.</string>
     <string name="signature_preparation">El dibujo de la firma aún está pendiente. La firma reutilizable se guardará solo en este dispositivo.</string>
     <string name="signed_at">Fecha de firma: %1$s</string>

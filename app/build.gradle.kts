@@ -47,9 +47,7 @@ ksp {
 }
 
 dependencies {
-    // El visor aún no se usa. PDFium 1.0.35 tiene metadatos Kotlin 2.2;
-    // conservar el motor empaquetado sin ponerlo en el classpath de Kotlin 2.0.
-    runtimeOnly(libs.pdfium)
+    implementation(libs.pdfium)
     implementation(libs.pdfbox)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

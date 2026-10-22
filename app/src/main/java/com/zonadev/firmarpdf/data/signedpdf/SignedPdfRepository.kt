@@ -1,6 +1,6 @@
-package com.zonadev.firmarpdf.data.history
+package com.zonadev.firmarpdf.data.signedpdf
 
-class HistoryRepository(private val dao: SignedPdfDao) {
+class SignedPdfRepository(private val dao: SignedPdfDao) {
     val results = dao.observeResults()
 
     suspend fun recordNewResult(result: SignedPdfEntity): Long = dao.insert(result)

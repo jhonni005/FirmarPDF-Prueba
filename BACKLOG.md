@@ -18,6 +18,8 @@ Fuente única de requisitos, bugs y estados. El plan de producto está en `docs/
 
 | ID | Resultado esperado | Prioridad | Estado |
 | --- | --- | --- | --- |
+| BASE-002 | Nombres aclarados: `data/signedpdf`, `SignedPdfDatabase`, `SignedPdfRepository`, `PdfSigningScreen` y `CreateSignatureScreen`. Referencias/pruebas actualizadas y esquema v1 trasladado sin cambiar SQL, hash ni archivo de base de datos. assembleDebug y assembleDebugAndroidTest correctos; 5 pruebas instrumentadas superadas en Huawei Android 10, incluida apertura de una base v1 anterior conservando su fila. | Alta | Completado |
+| SAF-001 | Inicio implementado con FAB «Firmar PDF» y OpenDocument application/pdf, consulta de nombre/lectura, selección pendiente reemplazable separada de Room y estado en ViewModel/SavedStateHandle. assembleDebug y 7 pruebas instrumentadas correctos (incluyen cancelación/reemplazo, URI ilegible y ausencia de inserciones). Verificación manual interrumpida al arrancar: `Error type 3` / `Error: Activity class {com.zonadev.firmarpdf/com.zonadev.firmarpdf.MainActivity} does not exist.` Tras las pruebas el paquete no está instalado; no se corrigió ni se continuó el recorrido por la regla de detenerse ante un fallo. Pendiente instalar el APK compilado y comprobar abrir SAF, cancelar, elegir A/B y rotar. | Alta | Implementado; verificación manual pendiente |
 | REQ-005 | Conservar edición y trazo al rotar y recuperar estado tras recreación cuando corresponda. | Alta | Pendiente |
 | MET-001 | Ajustes con consentimiento separado para Analytics y Crashlytics, persistencia y revocación. Hoy ambos SDK están integrados con recopilación desactivada; no hay controles ni DataStore. Revisar logs, excepciones y reporte de prueba voluntario antes de habilitar envío. | Alta | Pendiente |
 | PDF-001 | Definir/rechazar PDFs no admitidos, incluidos certificados; probar contraseña conocida y comunicar límites antes de editar. | Alta | Pendiente |
@@ -29,7 +31,7 @@ Fuente única de requisitos, bugs y estados. El plan de producto está en `docs/
 
 | ID | Reproducción y resultado esperado | Prioridad | Estado |
 | --- | --- | --- | --- |
-| BUILD-001 | PDFium 1.0.35 como `implementation` con Kotlin 2.0.21 falla por metadatos 2.2.0 en KSP1 y en compileDebugKotlin. En esta base, sin llamadas al visor, se conserva como `runtimeOnly`, empaquetado en el APK. Antes de implementar el visor, resolver el acceso a su API mediante una prueba de compatibilidad y documentar cualquier cambio mínimo de versión necesario. No omitir comprobaciones del compilador. | Alta | Pendiente para firma local |
+| BUILD-001 | Resuelto con Kotlin 2.2.0 + KSP 2.2.0-2.0.2 (KSP2), PDFium 1.0.35 como `implementation` y referencia Kotlin directa al tipo/constructor `PdfiumCore` en AppContainer. `:app:assembleDebug`: BUILD SUCCESSFUL; sin reflexión ni omisión de comprobaciones. AGP 8.9.2, PDFBox 2.0.27.0, Firebase y demás versiones conservadas. No implica una prueba de renderizado. | Alta | Resuelto |
 | SEC-001 | `:app:lintDebug` señala `TrustAllX509TrustManager` en Bouncy Castle `bcpkix-jdk15to18:1.72`, transitivo de PDFBox. Comprobar alcance/uso real antes de beta; no introducir ni usar clientes TLS que acepten cualquier certificado. El aviso estático por sí solo no demuestra tráfico inseguro de esta app. | Alta | Pendiente de revisión |
 
 No hay bugs funcionales reproducidos registrados. Las funciones de firma aún no existen.

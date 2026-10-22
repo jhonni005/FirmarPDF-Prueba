@@ -1,9 +1,9 @@
-package com.zonadev.firmarpdf.data.history
+package com.zonadev.firmarpdf.data.signedpdf
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(entities = [SignedPdfEntity::class], version = 1, exportSchema = true)
-abstract class HistoryDatabase : RoomDatabase() {
+abstract class SignedPdfDatabase : RoomDatabase() {
     abstract fun signedPdfDao(): SignedPdfDao
 }

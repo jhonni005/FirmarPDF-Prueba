@@ -3,11 +3,12 @@ package com.zonadev.firmarpdf.ui.home
 import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -18,52 +19,76 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.zonadev.firmarpdf.R
-import com.zonadev.firmarpdf.data.history.ResultKind
+import com.zonadev.firmarpdf.data.signedpdf.ResultKind
 import java.util.Date
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    onOpenEditor: () -> Unit,
-    onCreateSignature: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     LazyColumn(
-        modifier = modifier.padding(24.dp),
+        modifier = modifier,
+        // El FAB mide al menos 56 dp y tiene margen inferior: dejar libre la última fila.
+        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium) }
-        item { Text(stringResource(R.string.sign_pdf_title), style = MaterialTheme.typography.titleLarge) }
-        item { Text(stringResource(R.string.home_preparation)) }
-        item {
-            Button(onClick = onOpenEditor) { Text(stringResource(R.string.open_editor)) }
+        if (state.checkingSelection) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CircularProgressIndicator()
+                    Text(stringResource(R.string.selection_checking))
+                }
+            }
         }
-        item {
-            OutlinedButton(onClick = onCreateSignature) { Text(stringResource(R.string.signature_title)) }
+        state.selectionError?.let { error ->
+            item {
+                Text(
+                    stringResource(when (error) {
+                        PdfSelectionError.UNREADABLE -> R.string.selection_unreadable
+                        PdfSelectionError.PICKER_UNAVAILABLE -> R.string.pdf_picker_unavailable
+                    }),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        state.selectedPdf?.let { pdf ->
+            item {
+                Text(stringResource(R.string.selected_pdf_title), style = MaterialTheme.typography.titleLarge)
+            }
+            item(key = "selected_pdf") {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(pdf.displayName ?: stringResource(R.string.pdf_without_name), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.pdf_pending_signature))
+                    }
+                }
+            }
         }
         item {
             Text(stringResource(R.string.signed_documents_title), style = MaterialTheme.typography.titleLarge)
         }
-        when (state) {
-            HomeUiState.Loading -> item {
+        when (val signedPdfs = state.signedPdfs) {
+            SignedPdfsState.Loading -> item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator()
                     Text(stringResource(R.string.history_loading))
                 }
             }
-            HomeUiState.Error -> item {
+            SignedPdfsState.Error -> item {
                 Column {
                     Text(stringResource(R.string.history_error))
                     OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
                 }
             }
-            is HomeUiState.Content -> {
-                if (state.results.isEmpty()) {
+            is SignedPdfsState.Content -> {
+                if (signedPdfs.results.isEmpty()) {
                     item { Text(stringResource(R.string.history_empty)) }
                 }
-                items(state.results, key = { it.id }) { result ->
+                items(signedPdfs.results, key = { "signed_${it.id}" }) { result ->
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),

@@ -1,4 +1,4 @@
-package com.zonadev.firmarpdf.ui.editor
+package com.zonadev.firmarpdf.ui.signing
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.zonadev.firmarpdf.R
 
 @Composable
-fun EditorScreen(onCreateSignature: () -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun PdfSigningScreen(onCreateSignature: () -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.editor_title), style = MaterialTheme.typography.headlineMedium)
         Text(stringResource(R.string.editor_preparation))

@@ -1,6 +1,6 @@
 # Firma PDF — Arquitectura v0.1
 
-Estado: base de implementación preparada el 21 de octubre de 2026: navegación mínima, historial Room observable e integración Firebase con recopilación desactivada. El flujo de firma sigue pendiente. Las secciones de flujo describen el diseño objetivo; la sección 10 distingue el código actual. Este documento es la referencia para decidir cambios de arquitectura; se actualiza cuando el código real difiera.
+Estado: base de implementación y etapas pequeñas: BUILD-001 resuelto, nombres aclarados conservando Room v1 e Inicio con selección SAF en verificación. El flujo de firma sigue pendiente. Las secciones de flujo describen el diseño objetivo; la sección 10 distingue el código actual. Este documento es la referencia para decidir cambios de arquitectura; se actualiza cuando el código real difiera.
 
 ## 1. Objetivo y límites
 
@@ -9,17 +9,17 @@ Abrir un PDF, dibujar o reutilizar una firma manuscrita, colocarla en una o vari
 ## 2. Base técnica ya elegida
 
 - `namespace` y `applicationId`: `com.zonadev.firmarpdf`; `minSdk 28`, `compileSdk 36`, `targetSdk 36`.
-- Kotlin `2.0.21`, AGP `8.9.2`, Java/JVM `11`, Compose BOM `2024.09.00`. Mantener lo que ya compila; no actualizar todo por imitar LectorDocumentos, que usa Kotlin `2.2.0`.
+- Kotlin `2.2.0`, AGP `8.9.2`, Java/JVM `11`, Compose BOM `2024.09.00`. Kotlin se cambia por petición explícita para resolver BUILD-001; las demás versiones se conservan.
 - PDFium `io.legere:pdfiumandroid:1.0.35` para visualizar; PDFBox Android `2.0.27.0` para producir la firma gráfica. Inicializar `PDFBoxResourceLoader` con el contexto de aplicación antes de usar PDFBox.
-- Base incorporada: Lifecycle Compose `2.9.4`, Navigation Compose `2.8.0`, Room `2.8.2` + KSP `2.0.21-1.0.28` con KSP2, Firebase BoM `34.4.0`, Google Services `4.4.4` y plugin Crashlytics `3.0.6`. PDFium y PDFBox se centralizan en el catálogo sin cambiar sus versiones. DataStore queda pendiente del consentimiento persistente; no se añade una dependencia sin uso. Evitar Paging, Hilt, Koin y más módulos hasta que un problema concreto los justifique.
+- Base incorporada: Lifecycle Compose `2.9.4`, Navigation Compose `2.8.0`, Room `2.8.2` + KSP `2.2.0-2.0.2` con KSP2, Firebase BoM `34.4.0`, Google Services `4.4.4` y plugin Crashlytics `3.0.6`. PDFium y PDFBox se centralizan en el catálogo sin cambiar sus versiones. DataStore queda pendiente del consentimiento persistente; no se añade una dependencia sin uso. Evitar Paging, Hilt, Koin y más módulos hasta que un problema concreto los justifique.
 - Confirmar compatibilidad de todo el paquete nativo con páginas de 16 KB en el APK/AAB y con un emulador de 16 KB. No equivale a mirar únicamente la dependencia de PDFium.
 
 ## 3. Responsabilidades y dependencias
 
 ```text
-ui/home, ui/editor, ui/signature, ui/components
+ui/home, ui/signing, ui/signature, ui/components
            ↓
-HomeViewModel / EditorViewModel
+HomeViewModel / PdfSigningViewModel (futuro)
            ↓
 OpenPdf / SaveSignedPdf (coordinación)
            ↓
@@ -37,7 +37,7 @@ La operación `SaveSignedPdf` es una pieza de coordinación justificada: resuelv
 - `PdfOpenRequest`: URI de origen, acción (`PICK`, `VIEW`, `SEND`), permisos recibidos y nombre mostrado. No depender de rutas absolutas ni del nombre del proveedor para decidir permisos.
 - `PdfSource`: URI legible, acceso temporal/persistente y capacidades comprobadas. Una selección SAF puede venir de almacenamiento local o nube; un URI externo puede caducar. Conservar permiso persistente solo cuando el sistema lo otorgue.
 - `SignaturePlacement`: firma/bitmap de referencia, índice de página y geometría en coordenadas PDF o una transformación reversible bien documentada. Nunca guardar como origen de verdad la posición en píxeles de pantalla: zoom, desplazamiento, rotación, MediaBox/CropBox y páginas de tamaños distintos cambian la vista.
-- `EditorUiState`: documento, página/zoom, firma cargada, colocaciones, progreso, error y resultado. Una pulsación doble en Guardar no inicia dos exportaciones. No cargar bytes PDF en argumentos de navegación.
+- `PdfSigningUiState` (futuro): documento, página/zoom, firma cargada, colocaciones, progreso, error y resultado. Una pulsación doble en Guardar no inicia dos exportaciones. No cargar bytes PDF en argumentos de navegación.
 - `SavedSignatureStore`: un PNG en almacenamiento privado más metadatos mínimos, opción de reemplazar/borrar; Room no es necesario para esta única imagen.
 - `SignedPdfEntity` (Room): `id`, `resultUri`, `displayName`, `signedAt`, `resultKind` (`UPDATED_SOURCE` o `NEW_DOCUMENT`) y, si aporta valor, `sourceKind`. Guardar URI como texto y metadatos, nunca PDF/PNG en BLOB. Índice único o política definida para el mismo URI actualizado varias veces; al actualizar un original, cambiar su fecha en vez de crear duplicados sin fin. Exportar el esquema Room al repositorio y versionar migraciones; no usar migración destructiva cuando ya haya usuarios.
 
@@ -96,18 +96,36 @@ Detectar antes de editar PDF no admitidos, incluidos los que ya tengan firmas di
 ## 10. Base implementada y decisiones actuales
 
 - `MainActivity` hospeda Compose; no procesa URI externos todavía. `FirmaPdfApplication` inicializa PDFBox con `applicationContext` y posee un `AppContainer` con una única base Room/repositorio compartido.
-- `navigation/FirmaPdfApp` conecta Inicio, Editor y Crear firma. Las pantallas de preparación usan recursos en español y no ofrecen guardar/firmar como acciones operativas. No hay visor, dibujo, selección SAF, exportación, resultado ni ajustes todavía. Se conservan los archivos `ui.theme` generados.
+- `navigation/FirmaPdfApp` conserva los destinos Inicio, PdfSigningScreen y CreateSignatureScreen. El único flujo visible de Inicio es seleccionar un PDF; no navega automáticamente al editor ni ofrece sus pantallas de preparación como funciones operativas. No hay visor, dibujo, exportación, resultado ni ajustes todavía. Se conservan los archivos `ui.theme` generados.
 - Home observa `StateFlow` de `HomeViewModel` con recolección vinculada al ciclo de vida; muestra carga, vacío, lista o error recuperable. El repositorio expone el `Flow` de Room, sin datos de muestra. Cada fila contiene solo `id`, `resultUri`, `displayName`, `signedAt` (Unix en milisegundos) y `resultKind`; Room convierte el enum a texto. Índice único por URI y orden `signedAt DESC, id DESC`. La inserción rechaza duplicados sin eliminar filas; la futura actualización de original necesitará una operación explícita que conserve el ID y cambie su fecha, antes de activar esa función.
 - Esquema v1 exportado por KSP a `app/schemas/`, destinado al control de versiones. No se usa migración destructiva. La firma reutilizable futura será un PNG privado; no hay tabla ni repositorio ficticio para esa imagen, ni capas PDF vacías.
-- La prueba inicial con KSP1 `2.0.21-1.0.28` falla porque PDFium `1.0.35` declara metadatos Kotlin `2.2.0`. KSP2 genera Room, pero `compileDebugKotlin` confirma la misma incompatibilidad del motor. Se conserva KSP2 y PDFium se declara `runtimeOnly`: el motor sigue empaquetado, sin exponer sus metadatos al compilador mientras no hay llamadas al visor. No se cambia Kotlin, AGP, Compose o PDFium ni se omiten comprobaciones del compilador. `BUILD-001` exige resolver acceso a la API del visor antes de implementarlo; esta preparación no demuestra compatibilidad del visor con Kotlin 2.0.21.
+- Etapa 2 comprobada: `data/signedpdf` contiene `SignedPdfDatabase`, `SignedPdfRepository`, `SignedPdfEntity` y `SignedPdfDao`; `AppContainer.signedPdfRepository` es la instancia compartida. `ui/signing/PdfSigningScreen` y `ui/signature/CreateSignatureScreen` aclaran las funciones de las pantallas existentes, todavía de preparación. `AppContainer`, `FirmaPdfApp` y `FirmaPdfApplication` conservan sus nombres y responsabilidades. Se mueve el esquema a `app/schemas/com.zonadev.firmarpdf.data.signedpdf.SignedPdfDatabase/1.json`; tablas, columnas, índice, versión 1 y hash `360fc0bb3119eb7704b952858936cada` se conservan, al igual que el archivo privado `signed_pdf_history.db`. Un renombrado de clase no necesita migración SQL y no se borra ninguna base para hacerlo funcionar. assembleDebug y assembleDebugAndroidTest: BUILD SUCCESSFUL (16 s). connectedDebugAndroidTest: 5 pruebas superadas en Huawei YAL-L21 / Android 10 (40 s), incluida la apertura del esquema v1 anterior con una fila existente.
+- BUILD-001 resuelto: la preparación inicial con Kotlin 2.0.21 fallaba por los metadatos 2.2.0 de PDFium y usaba temporalmente `runtimeOnly`. La etapa 1 autorizada cambia a Kotlin 2.2.0 + KSP 2.2.0-2.0.2, manteniendo KSP2 y PDFium 1.0.35 como `implementation`. `AppContainer.pdfiumCore` referencia directamente el tipo y constructor de PDFium desde Kotlin, con inicialización diferida; no abre ni renderiza documentos. `:app:assembleDebug` terminó con BUILD SUCCESSFUL (1 min 58 s), incluidas KSP y compileDebugKotlin. No se usan reflexión ni banderas para omitir comprobaciones de metadatos. AGP, PDFBox, Compose, Firebase y demás versiones se conservaron. La disponibilidad al compilar no acredita renderizado ni compatibilidad nativa de 16 KB.
 - Se conserva el `app/google-services.json` existente, cuyo cliente coincide con `com.zonadev.firmarpdf`. Se integran Analytics/Crashlytics mediante BoM, módulos principales (sin KTX) y plugins oficiales. La recopilación global y de ambos productos está desactivada por metadatos desde el inicio. No hay eventos propios ni llamadas que habiliten envío. Crashlytics puede conservar informes locales aunque el envío esté desactivado; no prometer que Firebase nunca inicializa ni que no existe ninguna comunicación de red. El procesamiento PDF futuro no dependerá de estos SDK.
 - La pantalla de consentimiento, persistencia, revocación y comprobación de un informe voluntario en consola siguen en `MET-001`. No se incorpora DataStore todavía. No registrar nombres, URI ni contenido del PDF/firma en telemetría. Se desactiva la recopilación del identificador publicitario y se eliminan del Manifest combinado AD_ID y permisos de AdServices.
 - Guardado previsto: archivo nuevo público en `Documents/FirmarPdf/` para adjuntos externos. Para Android 9 se elige la futura escritura pública con `WRITE_EXTERNAL_STORAGE` limitado a `maxSdkVersion=28`; se declara ahora y solo se solicitará al implementar guardado. Android 10+ usará APIs de almacenamiento apropiadas y deberá verificar publicación y ruta. No hay permiso general de lectura, gestión de almacenamiento, medios ni notificaciones; tampoco VIEW/SEND ni FileProvider.
 - `allowBackup=false`: no se restauran datos privados de la app. `backup_rules.xml` excluye todos los dominios para Android 9–11; `data_extraction_rules.xml` los excluye tanto de nube como de transferencia entre dispositivos en Android 12+, incluido almacenamiento protegido del dispositivo. Esto cubre firmas PNG futuras, bases Room, preferencias y archivos privados; caché y `noBackupFilesDir` ya quedan fuera por el sistema. Una reinstalación pierde firma, historial y preferencias. Los PDF públicos futuros permanecerán en Documents y estas reglas no gestionan las copias personales que el usuario haga fuera de la app.
 - Manifest combinado: además de INTERNET y escritura solo hasta API 28, las dependencias aportan ACCESS_NETWORK_STATE, WAKE_LOCK y BIND_GET_INSTALL_REFERRER_SERVICE. AndroidX aporta un permiso propio de protección `signature` para receptores internos. No requieren solicitudes de permisos peligrosos en esta tarea.
-- La carpeta recibida no contiene `.git`; no se inicializa ni se inventa historial Git. Los esquemas y documentos quedan listos para añadir al repositorio cuando se configure.
+- La preparación inicial se recibió sin `.git`. Al empezar estas etapas el usuario ya había creado el repositorio (commit inicial `509a87f`); se conserva su cambio previo en `.idea/vcs.xml`. La comprobación de Git usa `safe.directory` solo para el comando, sin modificar configuración global.
 
-### Verificación de esta preparación
+### Etapa 3: Inicio y selección pendiente SAF
+
+- `FirmaPdfApp` hospeda el único Scaffold, el FAB extendido «Firmar PDF» y el contrato `ActivityResultContracts.OpenDocument` con MIME `application/pdf`. La pulsación abre inmediatamente el selector; la cancelación (`null`) no cambia selección ni historial. No se añaden permisos, filtros de intents, proveedores ni dependencias.
+- `HomeScreen` dibuja Inicio, la sección «PDF seleccionado» solo si existe una selección legible y la sección «Documentos firmados» observada desde Room. Son estados independientes: carga/error del historial no eliminan la selección. El LazyColumn reserva 112 dp al final para que el FAB no tape la última fila.
+- `SelectedPdfReader`, compartido por AppContainer, usa ContentResolver en Dispatchers.IO: abre el flujo en lectura, comprueba una lectura mínima y lo cierra; consulta OpenableColumns.DISPLAY_NAME. Si falta el nombre se muestra «PDF sin nombre», sin revelar URI ni rutas. Esto comprueba acceso, no la validez estructural del PDF. No copia bytes a archivos ni llama a PDFium/PDFBox.
+- HomeViewModel conserva solo un `SelectedPdf` (Uri y nombre opcional) en estado de pantalla; SavedStateHandle guarda únicamente el URI como texto para restaurar la tarea. El ViewModel conserva el estado al rotar. Si hay recreación de proceso, reconsulta nombre y acceso antes de mostrar la selección. No hay inserciones en Room, preferencias ni historial de selecciones; tampoco se acumulan permisos persistentes SAF. Una tarea cerrada no constituye un historial recuperable.
+- Elegir otro PDF cancela la comprobación anterior y reemplaza la única selección al verificar lectura. Si falla, se comunica el error sin exponer la excepción y se conserva la selección válida anterior; el usuario puede elegir otro desde el FAB. Un selector del sistema no disponible tiene un mensaje propio. Nunca se solicita permiso general de lectura/escritura para SAF.
+- Etapa 3: `.\gradlew.bat :app:assembleDebug :app:connectedDebugAndroidTest --console=plain` terminó con BUILD SUCCESSFUL (36 s), con 7 pruebas superadas en Huawei YAL-L21 / Android 10. Las dos pruebas nuevas ejercitan el estado de selección con flujos de prueba legibles e ilegibles, cancelación/reemplazo y Room sin nuevas filas. No sustituyen la interacción real con OpenDocument ni prueban rotación.
+- Verificación manual detenida por instrucción del usuario: tras crear dos PDF de prueba e intentar iniciar MainActivity, `adb shell am start -n com.zonadev.firmarpdf/.MainActivity` devolvió el error exacto siguiente. `adb shell pm path com.zonadev.firmarpdf` confirmó que no había paquete instalado tras las pruebas instrumentadas. Esto impidió iniciar el recorrido manual; no demuestra un fallo del código de SAF. No se reinstaló ni se continuó para respetar la regla de detenerse ante un fallo. El APK compilado está disponible en `app/build/outputs/apk/debug/app-debug.apk`. Pendiente instalarlo y comprobar abrir SAF, cancelar, seleccionar un PDF, reemplazarlo y girar la pantalla. Las funcionalidades completas de firma e historial siguen pendientes en BACKLOG.md.
+
+```text
+Error type 3
+Error: Activity class {com.zonadev.firmarpdf/com.zonadev.firmarpdf.MainActivity} does not exist.
+```
+
+Los archivos de prueba son `Seleccion-A.pdf` y `Seleccion-B.pdf` (585 bytes cada uno), creados para esta comprobación en `/sdcard/Download/FirmarPDF-Prueba-09fa683f/`; no provienen de documentos del usuario. El selector aún no se abrió en esta comprobación.
+
+### Verificación histórica de la preparación inicial (antes de estas etapas)
 
 Ejecutado en PowerShell con el wrapper existente:
 
@@ -133,3 +151,6 @@ Lint: 0 errores y 53 avisos, incluidos avisos repetidos de versiones más nuevas
 - Firebase, Analytics desactivado por defecto: https://firebase.google.com/docs/analytics/android/configure-data-collection
 - Firebase, Crashlytics y recopilación opcional: https://firebase.google.com/docs/crashlytics/android/customize-crash-reports
 - Android, exclusiones de backup y transferencia: https://developer.android.com/identity/data/autobackup
+- KSP 2.2.0-2.0.2 para Kotlin 2.2.0: https://github.com/google/ksp/releases/tag/2.2.0-2.0.2
+- Android, contrato OpenDocument: https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.OpenDocument
+- Android, estado temporal y SavedStateHandle: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-savedstate

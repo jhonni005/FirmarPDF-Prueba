@@ -2,15 +2,21 @@ package com.zonadev.firmarpdf.app
 
 import android.content.Context
 import androidx.room.Room
-import com.zonadev.firmarpdf.data.history.HistoryDatabase
-import com.zonadev.firmarpdf.data.history.HistoryRepository
+import com.zonadev.firmarpdf.data.pdf.SelectedPdfReader
+import com.zonadev.firmarpdf.data.signedpdf.SignedPdfDatabase
+import com.zonadev.firmarpdf.data.signedpdf.SignedPdfRepository
+import io.legere.pdfiumandroid.PdfiumCore
 
 class AppContainer(context: Context) {
+    // Referencia directa comprobada al compilar; el motor no se inicia hasta usarlo.
+    val pdfiumCore: PdfiumCore by lazy { PdfiumCore(context.applicationContext) }
+
     private val database = Room.databaseBuilder(
         context.applicationContext,
-        HistoryDatabase::class.java,
+        SignedPdfDatabase::class.java,
         "signed_pdf_history.db",
     ).build()
 
-    val historyRepository = HistoryRepository(database.signedPdfDao())
+    val signedPdfRepository = SignedPdfRepository(database.signedPdfDao())
+    val selectedPdfReader = SelectedPdfReader(context.applicationContext.contentResolver)
 }
