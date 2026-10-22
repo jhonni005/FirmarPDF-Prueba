@@ -10,6 +10,8 @@ import com.zonadev.firmarpdf.data.pdf.SelectedPdf
 import com.zonadev.firmarpdf.data.pdf.SelectedPdfReader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -39,10 +41,12 @@ class HomeViewModel(
     val uiState = mutableState.asStateFlow()
     private var observation: Job? = null
     private var selection: Job? = null
+    private val previews = Channel<Uri>(Channel.BUFFERED)
+    val previewRequests = previews.receiveAsFlow()
 
     init {
         loadHistory()
-        savedState.get<String>(SELECTED_URI)?.let { onPdfSelected(Uri.parse(it)) }
+        savedState.get<String>(SELECTED_URI)?.let { selectPdf(Uri.parse(it), openPreview = false) }
     }
 
     fun loadHistory() {
@@ -65,6 +69,10 @@ class HomeViewModel(
     fun onPdfSelected(uri: Uri?) {
         // Cancelar el selector conserva tanto la selección anterior como el historial.
         if (uri == null) return
+        selectPdf(uri, openPreview = true)
+    }
+
+    private fun selectPdf(uri: Uri, openPreview: Boolean) {
         selection?.cancel()
         selection = viewModelScope.launch {
             mutableState.update { it.copy(checkingSelection = true, selectionError = null) }
@@ -74,6 +82,7 @@ class HomeViewModel(
                 mutableState.update {
                     it.copy(selectedPdf = pdf, checkingSelection = false, selectionError = null)
                 }
+                if (openPreview) previews.send(uri)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

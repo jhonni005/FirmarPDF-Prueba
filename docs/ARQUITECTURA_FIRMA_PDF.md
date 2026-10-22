@@ -1,6 +1,6 @@
 # Firma PDF — Arquitectura v0.1
 
-Estado: base de implementación y etapas pequeñas: BUILD-001 resuelto, nombres aclarados conservando Room v1 e Inicio con selección SAF en verificación. El flujo de firma sigue pendiente. Las secciones de flujo describen el diseño objetivo; la sección 10 distingue el código actual. Este documento es la referencia para decidir cambios de arquitectura; se actualiza cuando el código real difiera.
+Estado al 22/10/2026: BUILD-001 resuelto, Room v1 conservado, selección SAF comprobada y vista previa PDFium implementada y probada en Huawei Android 10. El flujo de firma sigue pendiente. Las secciones de flujo describen el diseño objetivo; la sección 10 distingue el código actual. Este documento es la referencia para decidir cambios de arquitectura; se actualiza cuando el código real difiera.
 
 ## 1. Objetivo y límites
 
@@ -19,7 +19,7 @@ Abrir un PDF, dibujar o reutilizar una firma manuscrita, colocarla en una o vari
 ```text
 ui/home, ui/signing, ui/signature, ui/components
            ↓
-HomeViewModel / PdfSigningViewModel (futuro)
+HomeViewModel / PdfSigningViewModel
            ↓
 OpenPdf / SaveSignedPdf (coordinación)
            ↓
@@ -96,9 +96,9 @@ Detectar antes de editar PDF no admitidos, incluidos los que ya tengan firmas di
 ## 10. Base implementada y decisiones actuales
 
 - `MainActivity` hospeda Compose; no procesa URI externos todavía. `FirmaPdfApplication` inicializa PDFBox con `applicationContext` y posee un `AppContainer` con una única base Room/repositorio compartido.
-- `navigation/FirmaPdfApp` conserva los destinos Inicio, PdfSigningScreen y CreateSignatureScreen. El único flujo visible de Inicio es seleccionar un PDF; no navega automáticamente al editor ni ofrece sus pantallas de preparación como funciones operativas. No hay visor, dibujo, exportación, resultado ni ajustes todavía. Se conservan los archivos `ui.theme` generados.
+- `navigation/FirmaPdfApp` conserva los destinos Inicio, PdfSigningScreen y CreateSignatureScreen. Seleccionar correctamente un PDF ahora abre una sola vez la vista previa; la tarjeta pendiente de Inicio permite reabrirla. PdfSigningScreen solo ofrece lectura, páginas, zoom y Volver. Ofrece un acceso a Crear firma; no hay colocación, exportación, resultado ni ajustes. Se conservan los archivos `ui.theme` generados.
 - Home observa `StateFlow` de `HomeViewModel` con recolección vinculada al ciclo de vida; muestra carga, vacío, lista o error recuperable. El repositorio expone el `Flow` de Room, sin datos de muestra. Cada fila contiene solo `id`, `resultUri`, `displayName`, `signedAt` (Unix en milisegundos) y `resultKind`; Room convierte el enum a texto. Índice único por URI y orden `signedAt DESC, id DESC`. La inserción rechaza duplicados sin eliminar filas; la futura actualización de original necesitará una operación explícita que conserve el ID y cambie su fecha, antes de activar esa función.
-- Esquema v1 exportado por KSP a `app/schemas/`, destinado al control de versiones. No se usa migración destructiva. La firma reutilizable futura será un PNG privado; no hay tabla ni repositorio ficticio para esa imagen, ni capas PDF vacías.
+- Esquema v1 exportado por KSP a `app/schemas/`, destinado al control de versiones. No se usa migración destructiva. La firma reutilizable se guarda en PNG privado mediante SignatureStore, sin tabla Room para la imagen.
 - Etapa 2 comprobada: `data/signedpdf` contiene `SignedPdfDatabase`, `SignedPdfRepository`, `SignedPdfEntity` y `SignedPdfDao`; `AppContainer.signedPdfRepository` es la instancia compartida. `ui/signing/PdfSigningScreen` y `ui/signature/CreateSignatureScreen` aclaran las funciones de las pantallas existentes, todavía de preparación. `AppContainer`, `FirmaPdfApp` y `FirmaPdfApplication` conservan sus nombres y responsabilidades. Se mueve el esquema a `app/schemas/com.zonadev.firmarpdf.data.signedpdf.SignedPdfDatabase/1.json`; tablas, columnas, índice, versión 1 y hash `360fc0bb3119eb7704b952858936cada` se conservan, al igual que el archivo privado `signed_pdf_history.db`. Un renombrado de clase no necesita migración SQL y no se borra ninguna base para hacerlo funcionar. assembleDebug y assembleDebugAndroidTest: BUILD SUCCESSFUL (16 s). connectedDebugAndroidTest: 5 pruebas superadas en Huawei YAL-L21 / Android 10 (40 s), incluida la apertura del esquema v1 anterior con una fila existente.
 - BUILD-001 resuelto: la preparación inicial con Kotlin 2.0.21 fallaba por los metadatos 2.2.0 de PDFium y usaba temporalmente `runtimeOnly`. La etapa 1 autorizada cambia a Kotlin 2.2.0 + KSP 2.2.0-2.0.2, manteniendo KSP2 y PDFium 1.0.35 como `implementation`. `AppContainer.pdfiumCore` referencia directamente el tipo y constructor de PDFium desde Kotlin, con inicialización diferida; no abre ni renderiza documentos. `:app:assembleDebug` terminó con BUILD SUCCESSFUL (1 min 58 s), incluidas KSP y compileDebugKotlin. No se usan reflexión ni banderas para omitir comprobaciones de metadatos. AGP, PDFBox, Compose, Firebase y demás versiones se conservaron. La disponibilidad al compilar no acredita renderizado ni compatibilidad nativa de 16 KB.
 - Se conserva el `app/google-services.json` existente, cuyo cliente coincide con `com.zonadev.firmarpdf`. Se integran Analytics/Crashlytics mediante BoM, módulos principales (sin KTX) y plugins oficiales. La recopilación global y de ambos productos está desactivada por metadatos desde el inicio. No hay eventos propios ni llamadas que habiliten envío. Crashlytics puede conservar informes locales aunque el envío esté desactivado; no prometer que Firebase nunca inicializa ni que no existe ninguna comunicación de red. El procesamiento PDF futuro no dependerá de estos SDK.
@@ -108,7 +108,7 @@ Detectar antes de editar PDF no admitidos, incluidos los que ya tengan firmas di
 - Manifest combinado: además de INTERNET y escritura solo hasta API 28, las dependencias aportan ACCESS_NETWORK_STATE, WAKE_LOCK y BIND_GET_INSTALL_REFERRER_SERVICE. AndroidX aporta un permiso propio de protección `signature` para receptores internos. No requieren solicitudes de permisos peligrosos en esta tarea.
 - La preparación inicial se recibió sin `.git`. Al empezar estas etapas el usuario ya había creado el repositorio (commit inicial `509a87f`); se conserva su cambio previo en `.idea/vcs.xml`. La comprobación de Git usa `safe.directory` solo para el comando, sin modificar configuración global.
 
-### Etapa 3: Inicio y selección pendiente SAF
+### Etapa 3 histórica: Inicio y selección pendiente SAF, antes de la vista previa
 
 - `FirmaPdfApp` hospeda el único Scaffold, el FAB extendido «Firmar PDF» y el contrato `ActivityResultContracts.OpenDocument` con MIME `application/pdf`. La pulsación abre inmediatamente el selector; la cancelación (`null`) no cambia selección ni historial. No se añaden permisos, filtros de intents, proveedores ni dependencias.
 - `HomeScreen` dibuja Inicio, la sección «PDF seleccionado» solo si existe una selección legible y la sección «Documentos firmados» observada desde Room. Son estados independientes: carga/error del historial no eliminan la selección. El LazyColumn reserva 112 dp al final para que el FAB no tape la última fila.
@@ -137,6 +137,70 @@ Resultado: `BUILD SUCCESSFUL`. APK en `app/build/outputs/apk/debug/app-debug.apk
 
 Lint: 0 errores y 53 avisos, incluidos avisos repetidos de versiones más nuevas, recursos originales sin uso/etiqueta redundante y `TrustAllX509TrustManager` de Bouncy Castle transitivo de PDFBox (`SEC-001`). No se cambian versiones por esos avisos ni se ocultan verificaciones. Se revisó el Manifest combinado, el esquema generado y el diff contra la copia temporal de los archivos iniciales; no quedan Greeting, Hello Android, textos nuevos de interfaz en Kotlin, recursos de texto nuevos sin uso ni declaraciones duplicadas de PDFium/PDFBox.
 
+## 11. Vista previa — decisión y comprobación del 22/10/2026
+
+Se instaló con `:app:installDebug` (BUILD SUCCESSFUL, instalado en 1 dispositivo) y se confirmó el paquete con `pm path`. En Huawei YAL-L21 / Android 10 se abrió realmente DocumentsUI desde el FAB, se canceló, se eligió Seleccion-A.pdf, se eligió B y se giró a horizontal: se mantuvo una única tarjeta B y el historial vacío. La orientación del sistema se restauró al terminar. Esto sustituye la verificación pendiente de SAF-001; el error histórico de Activity inexistente correspondía a la ausencia de instalación.
+
+Se leyeron los dos archivos de referencia de LectorDocumentos indicados por el usuario. Se aprovecha el patrón de descriptor en lectura/PDFium, mutex, cierre de páginas con use, generación de apertura, LruCache y LazyColumn con gestos de zoom/pan. No se copian la pantalla completa ni búsqueda, selección de texto, firmas, anuncios, Premium, operaciones de archivo, logs o telemetría de esa app.
+
+La vista previa es una sola función nueva. `PdfPreviewSession` posee el documento y su descriptor; abre sin copia previa, serializa renderizado/cierre, usa páginas con use y limita la caché a min(24 MiB, heap/8), más las referencias visibles de LazyColumn. Cada bitmap RGB_565 tiene como máximo aproximadamente 4 MiB / 2 Mpx, ancho 1440 y alto 4096, conservando proporción. La resolución no aumenta con el zoom: se acepta suavidad/pixelado al ampliar como límite de esta primera vista previa. Los bitmaps publicados no se reciclan manualmente porque Compose puede seguir usándolos; al expulsar/salir se liberan referencias y Android recupera la memoria. Apertura/renderizado/cierre se ejecutan en IO, con invalidación antes de cancelar y cierre serializado incluso si termina tarde un trabajo nativo.
+
+`PdfSigningViewModel` pertenece al destino de navegación y sobrevive a rotación; al retirarlo cierra la sesión con un trabajo de limpieza que puede completar tras cancelar viewModelScope. Cada apertura y reintento tiene su sesión/generación; las imágenes se producen con claves de sesión/página/ancho y nunca se comparten entre PDF. La selección emite un evento de navegación consumible una sola vez; restaurar la selección guardada no emite ese evento. La tarjeta de Inicio reabre explícitamente. Room y la política de guardado no cambian.
+
+El zoom adapta únicamente los gestos desacoplables de la referencia: doble toque 1×/2×/3×/1×, pinza hasta 5×, pan horizontal acotado y desplazamiento vertical delegado a la lista con conversión de escala. A 1× el desplazamiento y fling pertenecen a LazyColumn. Se mantienen índice de lista y zoom al rotar, sin fijar orientación. La futura pantalla para dibujar firma tendrá diseño vertical (UX-002); no se implementa aquí.
+
+Los errores de acceso, formato, contraseña, memoria y renderizado se representan por categorías y recursos en español. No se registran nombres, URI, contenido ni excepciones originales, y el logger configurable de PDFium se silencia. No hay acciones de firma, acceso a Crear firma, modificación del original, exportación ni registro en Room al visualizar. El cierre del descriptor tiene un finally adicional por si falla el cierre nativo. El indicador de página usa derivedStateOf para no recomponer por cada píxel de desplazamiento; sus coordenadas de pan se limitan de nuevo al cambiar el tamaño de la ventana.
+
+### Resultados de compilación y pruebas de vista previa
+
+Comando final ejecutado en PowerShell:
+
+```powershell
+.\gradlew.bat :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:installDebug --console=plain
+```
+
+BUILD SUCCESSFUL, instalado en un Huawei YAL-L21 / Android 10. Lint: 0 errores, 56 avisos (versiones más nuevas, recursos/label de la plantilla, recomendaciones UseKtx y el aviso Bouncy Castle ya registrado como SEC-001). No se cambian versiones ni se silencian comprobaciones. Manifest, dependencias, Room y hash v1 permanecen sin cambios.
+
+Tras instalar el APK de pruebas se ejecutó directamente el runner, conservando la app instalada al terminar:
+
+```powershell
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w -e previewDeviceFixtures true com.zonadev.firmarpdf.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Resultado final: **OK (12 tests)**, aproximadamente 22 s. Incluye las 7 pruebas previas, 4 de sesión PDFium y 1 de interfaz real. Las de sesión verifican dimensiones distintas/proporción y límite de bitmap, lectura inválida/inaccesible, contraseña, cierre del descriptor por identidad de archivo y rechazo de renderizado tras cerrar. La prueba de interfaz no llama al ViewModel: toca el FAB y DocumentsUI e inyecta eventos táctiles reales de dos dedos, doble toque y pan; gira con zoom activo, recorre páginas, vuelve/reabre y cambia de archivo. Una versión inicial del test de descriptor comparaba rutas equivalentes de Android y falló; se corrigió para comparar dispositivo/inodo y se comprobó apertura y cierre efectivo en cinco ciclos.
+
+| Comprobación real | Resultado ejecutado |
+| --- | --- |
+| SAF antes del visor | Abrir, cancelar, A, B y rotar; una tarjeta pendiente, historial vacío. |
+| PDF de una página | Seleccion-A.pdf: apertura automática, volver, reabrir tarjeta y girar sin navegación duplicada. |
+| PDF de seis páginas | Multipagina.pdf (4873 bytes), tamaños verticales/horizontales diferentes: desplazamiento hasta la última, pinza, doble toque, pan, vuelta/reapertura, rotación horizontal/vertical conservando zoom. Se revisó una captura de páginas consecutivas renderizadas. |
+| PDF grande disponible | Grande.pdf, sintético, 8 páginas con imágenes RGB, 24 004 789 bytes (~22,9 MiB): apertura, desplazamiento hasta la página 8, regreso a Inicio con tarjeta e historial vacío. |
+| Errores | Archivo inválido elegido realmente en SAF muestra error comprensible; protegido e inaccesible se verifican con PDFium/ContentResolver en pruebas instrumentadas, no mediante el selector. |
+| Originales | SHA-256 de los tres archivos nuevos de prueba coincide con los locales tras visualizar; no hay modificación de origen. |
+| Instalación | pm path confirma que el paquete permanece instalado después de las pruebas. |
+
+Captura de memoria aislada con el PDF grande abierto: Java Heap 18 096 KiB, Native Heap 86 608 KiB y Graphics 52 508 KiB. Son categorías de una instantánea de dumpsys, no un pico medido ni una garantía de memoria total. No se midieron FPS ni tiempos con un benchmark. La caché acota bitmaps propios; el motor nativo y la GPU mantienen asignaciones adicionales.
+
+Límites: los PDF grandes son sintéticos, no documentos complejos reales. La resolución fija puede verse pixelada al ampliar; no hay rerenderizado de alta resolución ni inercia propia al desplazar con zoom. El indicador corresponde a la primera página visible, de modo que puede indicar 7/8 con la última página visible debajo. No se comprobaron proveedores remotos o descriptores no posicionables, memoria agotada, muerte de proceso ni dispositivos de 16 KB; QA-PREVIEW-001 conserva esas verificaciones. No se bloquea la orientación de la vista previa. Firma, colocación y exportación permanecen sin implementar.
+
+Para reproducir las pruebas de interfaz: `python scripts/create_preview_fixtures.py` genera Multipagina.pdf, Grande.pdf e Invalido.pdf en el directorio temporal mostrado, usando solo la biblioteca estándar. Copiarlos con adb a una carpeta de pruebas pública y dejar DocumentsUI situado en ella antes de ejecutar el runner con `previewDeviceFixtures=true`. Sin ese parámetro, la prueba de laboratorio se omite; las otras 11 son independientes del selector. Las capturas y la salida de esta ejecución están en `app/build/reports/preview/` (artefactos generados, no fuente de requisitos).
+
+## 12. Crear firma — etapa de dibujo y guardado privado
+
+Se conserva el trabajo existente, versiones, dependencias, selección SAF, Room y su esquema v1. CreateSignatureScreen sustituye únicamente la pantalla de preparación. Desde la vista previa se añade un acceso Crear firma; no se modifica un menú inferior ni se implementan herramientas sobre el PDF.
+
+- CreateSignatureViewModel mantiene trazos y ajustes por destino. Cada trazo conserva color ARGB, grosor relativo al ancho y puntos normalizados. Cambiar color/grosor afecta solo al trazo siguiente. Los trazos en curso se confirman al levantar el dedo; una cancelación del gesto descarta solo ese trazo. Deshacer elimina el último y Borrar limpia el borrador.
+- La paleta tiene 10 colores, negro inicial, selección con borde y semántica accesible de radio. Slider 1,0–10,0 cada 0,5, formato decimal español y descripción accesible. Canvas blanco con borde ocupa el espacio restante; los controles inferiores conservan su lugar. Todos los textos y etiquetas proceden de recursos.
+- El borrador sobrevive a recreación de Activity mediante ViewModel; no se promete recuperación tras muerte de proceso. Salir con trazos exige confirmar descarte. Durante guardado se bloquean acciones para impedir escrituras repetidas o descartar el dibujo a mitad de operación. Un error conserva el borrador y permite reintentar; no se registran trazos ni excepciones en telemetría.
+- No existía almacenamiento implementado de firmas. SignatureStore guarda una única firma reutilizable en filesDir/signature/signature.png, siguiendo el MVP existente: Guardar reemplaza la anterior con AtomicFile, fuera de Room. El renderizador compartido dibuja tanto en Canvas como en el PNG, con extremos redondos y soporte de puntos. PNG ARGB_8888 transparente, recortado alrededor de los trazos con margen, sin fondo blanco. Se limita la superficie de renderizado a 1600×2400 conservando la proporción del lienzo. Compresión/escritura en IO y liberación del bitmap al terminar.
+- La política de copia de seguridad existente ya excluye todos los archivos privados: el PNG no entra en backup ni transferencia. No cambia la política de guardado de PDF ni se solicitan permisos nuevos.
+- La navegación controla portrait únicamente mientras el destino es Crear firma; al volver solicita UNSPECIFIED para que el sistema gobierne de nuevo la orientación. No se añade screenOrientation al Manifest. Tras guardar se retira el destino y vuelve al visor sin colocar ninguna firma.
+
+Verificación ejecutada: assembleDebug y assembleDebugAndroidTest, BUILD SUCCESSFUL. Solo se ejecutó CreateSignatureTest (3 pruebas, OK) en Huawei Android 10: dibujo táctil y controles con 400 dp de altura, selección de color/slider, deshacer/borrar, confirmación de salida, guardado/callback, PNG con zonas transparentes y ambos colores, reemplazo del PNG anterior y fallo de escritura conservando el dibujo. Recorrido real adicional por SAF y visor: abrir Crear firma, trazar, intentar salir, seguir dibujando, guardar y volver a Vista previa; se comprobó el PNG privado y se eliminó únicamente esa firma sintética de prueba. Se verificó con dumpsys que al regresar la política era SCREEN_ORIENTATION_UNSPECIFIED. El giro simulado por settings volvió a portrait tras la solicitud vertical; no se declara verificado un giro físico del dispositivo. SIG-002 deja constancia del ajuste y ese límite de la prueba.
+
+Pendiente para próximas etapas: selección de la firma guardada y colocación/redimensionado en PDF. No hay sheet, borde rojo, arrastre, texto, sellos ni exportación. El plan de producto describe el objetivo futuro; esta sección describe el alcance implementado actual.
+
 ## Fuentes técnicas
 
 - Android, recomendaciones de arquitectura: https://developer.android.com/topic/architecture/recommendations
@@ -154,3 +218,5 @@ Lint: 0 errores y 53 avisos, incluidos avisos repetidos de versiones más nuevas
 - KSP 2.2.0-2.0.2 para Kotlin 2.2.0: https://github.com/google/ksp/releases/tag/2.2.0-2.0.2
 - Android, contrato OpenDocument: https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.OpenDocument
 - Android, estado temporal y SavedStateHandle: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-savedstate
+- Android, gestos y consumo de eventos Compose: https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures
+- Android, zoom y desplazamiento multitáctil: https://developer.android.com/develop/ui/compose/touch-input/pointer-input/multi-touch

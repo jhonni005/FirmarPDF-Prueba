@@ -26,6 +26,7 @@ import java.util.Date
 fun HomeScreen(
     state: HomeUiState,
     onRetry: () -> Unit,
+    onOpenSelectedPdf: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -60,7 +61,7 @@ fun HomeScreen(
                 Text(stringResource(R.string.selected_pdf_title), style = MaterialTheme.typography.titleLarge)
             }
             item(key = "selected_pdf") {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(onClick = onOpenSelectedPdf, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(pdf.displayName ?: stringResource(R.string.pdf_without_name), style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(R.string.pdf_pending_signature))
