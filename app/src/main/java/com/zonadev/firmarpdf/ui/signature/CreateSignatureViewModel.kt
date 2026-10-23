@@ -6,14 +6,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zonadev.firmarpdf.data.signature.SignaturePoint
-import com.zonadev.firmarpdf.data.signature.SignatureStore
+import com.zonadev.firmarpdf.data.signature.SavedSignatureStore
 import com.zonadev.firmarpdf.data.signature.SignatureStroke
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-class CreateSignatureViewModel(private val store: SignatureStore) : ViewModel() {
+class CreateSignatureViewModel(private val store: SavedSignatureStore) : ViewModel() {
     var strokes by mutableStateOf<List<SignatureStroke>>(emptyList())
         private set
     var active by mutableStateOf<SignatureStroke?>(null)

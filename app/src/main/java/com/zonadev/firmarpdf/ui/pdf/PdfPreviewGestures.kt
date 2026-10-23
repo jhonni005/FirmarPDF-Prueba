@@ -1,4 +1,4 @@
-package com.zonadev.firmarpdf.ui.signing
+package com.zonadev.firmarpdf.ui.pdf
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -8,10 +8,12 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -81,12 +83,69 @@ internal class PdfPreviewZoomState(scale: Float = 1f, x: Float = 0f, y: Float = 
     }
 }
 
-internal fun Modifier.pdfPreviewGestures(zoom: PdfPreviewZoomState, list: LazyListState): Modifier =
-    pointerInput(zoom) {
-        detectTapGestures(onDoubleTap = { zoom.doubleTap(it, size) })
+@Composable
+internal fun Modifier.pdfPreviewGestures(
+    zoom: PdfPreviewZoomState, list: LazyListState, signatures: PdfSignatureGestureCallbacks,
+): Modifier {
+    val callbacks = rememberUpdatedState(signatures)
+    return pointerInput(zoom) {
+        detectTapGestures(onDoubleTap = {
+            if (callbacks.value.viewportEnabled && callbacks.value.hitTest(it) == null) zoom.doubleTap(it, size)
+        })
     }.pointerInput(zoom, list) {
         awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (!callbacks.value.viewportEnabled) {
+                down.consume()
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
+                return@awaitEachGesture
+            }
+            val hit = callbacks.value.hitTest(down.position)
+            if (hit != null) {
+                down.consume()
+                callbacks.value.onPress(hit)
+                var dragging = false
+                var cancelled = false
+                var total = Offset.Zero
+                try {
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        val pointers = event.changes.count { it.pressed }
+                        if (pointers > 1 || change == null) {
+                            cancelled = true
+                            dragging = false
+                            callbacks.value.onCancel()
+                        }
+                        // Una pinza puede comenzar sobre una firma; pasa al zoom sin confirmar el arrastre.
+                        if (cancelled) {
+                            if (pointers > 1) zoom.zoomAt(event.calculateZoom(), event.calculateCentroid(), size)
+                            if (pointers > 1 || zoom.scale > 1.01f) zoom.pan(event.calculatePan(), size, list)
+                        }
+                        if (change != null && !cancelled) {
+                            val delta = change.position - change.previousPosition
+                            total += delta
+                            if (!dragging && total.getDistance() > viewConfiguration.touchSlop && hit.control != SignatureControl.REMOVE) {
+                                dragging = true
+                                callbacks.value.onStart(hit)
+                                callbacks.value.onMove(total, change.position)
+                            } else if (dragging) callbacks.value.onMove(delta, change.position)
+                            if (!change.pressed) {
+                                if (dragging) callbacks.value.onEnd()
+                                else if (total.getDistance() <= viewConfiguration.touchSlop) callbacks.value.onTap(hit)
+                                dragging = false
+                            }
+                        }
+                        event.changes.forEach { it.consume() }
+                    } while (event.changes.any { it.pressed })
+                } finally {
+                    if (dragging || cancelled) callbacks.value.onCancel()
+                }
+                return@awaitEachGesture
+            }
             var accumulated = Offset.Zero
             var pastSlop = false
             do {
@@ -106,3 +165,4 @@ internal fun Modifier.pdfPreviewGestures(zoom: PdfPreviewZoomState, list: LazyLi
             } while (event.changes.any { it.pressed })
         }
     }
+}

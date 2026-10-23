@@ -2,7 +2,7 @@ package com.zonadev.firmarpdf.app
 
 import android.content.Context
 import java.io.File
-import com.zonadev.firmarpdf.data.signature.SignatureStore
+import com.zonadev.firmarpdf.data.signature.SavedSignatureStore
 import androidx.room.Room
 import com.zonadev.firmarpdf.data.pdf.SelectedPdfReader
 import com.zonadev.firmarpdf.data.signedpdf.SignedPdfDatabase
@@ -12,7 +12,7 @@ import io.legere.pdfiumandroid.LoggerInterface
 import io.legere.pdfiumandroid.util.Config
 
 class AppContainer(context: Context) {
-    val signatureStore = SignatureStore(File(context.applicationContext.filesDir, "signature"))
+    val savedSignatureStore = SavedSignatureStore(File(context.applicationContext.filesDir, "signature"))
     // Referencia directa comprobada al compilar; el motor no se inicia hasta usarlo.
     val pdfiumCore: PdfiumCore by lazy {
         PdfiumCore(context.applicationContext, Config(logger = object : LoggerInterface {

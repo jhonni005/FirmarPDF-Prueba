@@ -36,7 +36,7 @@ Adobe documenta que Acrobat móvil permite rellenar, firmar y compartir sin susc
 
 - Abrir PDF local con el selector del sistema y recibirlo desde otra app.
 - Visualizar varias páginas con zoom.
-- Dibujar una firma, borrar/deshacer trazos y conservar una firma reutilizable opcional.
+- Dibujar una firma, borrar/deshacer trazos y conservar varias firmas reutilizables en almacenamiento privado.
 - Insertar una o varias colocaciones de esa firma en las páginas necesarias; mover, redimensionar y eliminar antes de exportar.
 - Firmar y exportar PDF ilimitados sin paywall. Para documentos entrantes desde Gmail/WhatsApp y fuentes de solo lectura, guardar un archivo nuevo en `Documents/FirmarPdf/` y permitir compartirlo.
 - Mostrar en Home una lista de PDF firmados; Room conserva URI y metadatos de resultado, no los bytes del PDF. El resultado debe poder reabrirse tras reiniciar la app.
@@ -61,7 +61,7 @@ La función inicial añade una representación de firma manuscrita al PDF. No at
 
 1. **Inicio:** acción principal «Firmar un PDF», historial Room de resultados firmados, acceso discreto a firma guardada y ajustes. El usuario que comparte un archivo desde otra app entra directamente al editor si el documento es válido.
 2. **Editor:** documento como protagonista, controles de página/zoom y herramientas de firma. Acción «Guardar» sin diálogo de modo; informar tras terminar si se actualizó el original o dónde se creó el archivo nuevo.
-3. **Crear firma:** superficie amplia, sin cierre por tocar fuera mientras se dibuja; borrar/deshacer y confirmar. Puede ser una pantalla o panel integrado según el boceto.
+3. **Crear firma:** pantalla vertical con colores, grosor, lienzo, borrar/deshacer y guardado permanente de cada firma. No existe «Usar solo esta vez».
 4. **Resultado:** confirmar solo cuando termine la escritura; abrir, compartir o volver a firmar. Evitar obligar a guardar dos veces para compartir.
 
 Estados que hay que dibujar antes de programar: carga, PDF vacío o ilegible, contraseña no admitida o incorrecta, permiso perdido, cancelación del selector, exportación en curso, falta de espacio, éxito y error con reintento.
@@ -87,7 +87,7 @@ Primer trabajo técnico en el proyecto ya creado: lograr que un PDF de prueba en
 
 Mantener inicialmente un módulo si simplifica el trabajo. Evitar trasladar AppRoot, los visores Office, toda la base de metadatos o los gestores de anuncios/recompensas. Si conviene compartir un módulo con LectorDocumentos se decidirá después de inspeccionar el acoplamiento; no condicionar la beta a una refactorización del producto existente.
 
-Para abrir, usar `ACTION_OPEN_DOCUMENT` y aceptar `ACTION_VIEW`/`ACTION_SEND` con permisos temporales. SAF no exige permiso general para el PDF seleccionado. Para resultados nuevos, comprobar el guardado público en `Documents/FirmarPdf/` con las APIs adecuadas y verificar `IS_PENDING = 0` cuando corresponda. Android 9 requiere una ruta de escritura pública específica. Compartir el URI final con permiso de lectura para el destinatario. Stack inicial: Kotlin 2.0.21, AGP 8.9.2, minSdk 28, compile/targetSdk 36, PDFium 1.0.35, PDFBox Android 2.0.27.0; consultar el documento de arquitectura para límites y pruebas.
+Para abrir, usar `ACTION_OPEN_DOCUMENT` y aceptar `ACTION_VIEW`/`ACTION_SEND` con permisos temporales. SAF no exige permiso general para el PDF seleccionado. Para resultados nuevos, comprobar el guardado público en `Documents/FirmarPdf/` con las APIs adecuadas y verificar `IS_PENDING = 0` cuando corresponda. Android 9 requiere una ruta de escritura pública específica. Compartir el URI final con permiso de lectura para el destinatario. Stack actual: Kotlin 2.2.0, AGP 8.9.2, minSdk 28, compile/targetSdk 36, PDFium 1.0.35, PDFBox Android 2.0.27.0; consultar el documento de arquitectura para límites y pruebas.
 
 El fallo observado en Battery Stats Saver no está diagnosticado. IS_PENDING, MIME, permisos de URI, indexación y compatibilidad del PDF son hipótesis distintas.
 
@@ -101,9 +101,9 @@ Punto de revisión orientativo: tras unas 100–200 sesiones reales de firma de 
 
 ### Etapa B — comprobar ingresos
 
-Preferencia inicial: pago único opcional por comodidad para usuarios frecuentes. Candidatos a investigar: varias firmas o sellos guardados, conjuntos de nombre/fecha/cargo reutilizables y colocar una firma en varias páginas de una vez con vista previa. Seleccionar uno o dos beneficios respaldados por solicitudes, en vez de construirlos todos.
+Preferencia inicial: pago único opcional por comodidad para usuarios frecuentes. Candidatos a investigar: sellos guardados, conjuntos de nombre/fecha/cargo reutilizables y colocar una firma en varias páginas de una vez con vista previa. Varias firmas manuscritas guardadas forman parte del MVP gratuito. Seleccionar uno o dos beneficios pagados respaldados por solicitudes, en vez de construirlos todos.
 
-La firma básica, una firma guardada, colocación manual en las páginas necesarias, guardado y compartir permanecen disponibles. Mostrar cualquier precio antes de usar una función de pago; permitir seguir trabajando con las funciones básicas.
+La firma básica, varias firmas manuscritas guardadas, colocación manual en las páginas necesarias, guardado y compartir permanecen disponibles. Mostrar cualquier precio antes de usar una función de pago; permitir seguir trabajando con las funciones básicas.
 
 No fijar precio definitivo antes de probar el producto y la propuesta pagada. Un intervalo exploratorio de S/19.90–29.90 podría servir como hipótesis local, no como estimación de disposición a pagar ni recomendación basada en ingresos observados. No copiar las suscripciones semanales de competidores como señal de rentabilidad.
 

@@ -1,4 +1,4 @@
-package com.zonadev.firmarpdf.ui.signing
+package com.zonadev.firmarpdf.ui.pdf
 
 import android.content.ContentResolver
 import android.net.Uri
@@ -26,7 +26,7 @@ sealed interface PdfPreviewState {
     data class Error(val reason: PdfPreviewError) : PdfPreviewState
 }
 
-class PdfSigningViewModel(
+class PdfPreviewViewModel(
     private val resolver: ContentResolver,
     private val core: () -> PdfiumCore,
     private val uri: Uri,

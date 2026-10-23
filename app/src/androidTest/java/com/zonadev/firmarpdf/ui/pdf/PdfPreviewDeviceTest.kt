@@ -1,4 +1,4 @@
-package com.zonadev.firmarpdf.ui.signing
+package com.zonadev.firmarpdf.ui.pdf
 
 import android.content.pm.ActivityInfo
 import android.graphics.Rect

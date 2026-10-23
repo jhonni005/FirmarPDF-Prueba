@@ -36,8 +36,9 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.zonadev.firmarpdf.R
 import com.zonadev.firmarpdf.app.AppContainer
-import com.zonadev.firmarpdf.ui.signing.PdfSigningScreen
-import com.zonadev.firmarpdf.ui.signing.PdfSigningViewModel
+import com.zonadev.firmarpdf.ui.pdf.PdfPreviewScreen
+import com.zonadev.firmarpdf.ui.pdf.PdfPreviewViewModel
+import com.zonadev.firmarpdf.ui.pdf.PdfSignatureViewModel
 import com.zonadev.firmarpdf.ui.home.HomeScreen
 import com.zonadev.firmarpdf.ui.home.HomeViewModel
 import com.zonadev.firmarpdf.ui.signature.CreateSignatureScreen
@@ -106,9 +107,9 @@ fun FirmaPdfApp(container: AppContainer) {
                 )
             }
             composable(Routes.PREVIEW, arguments = listOf(navArgument("documentUri") { type = NavType.StringType })) { entry ->
-                val previewViewModel: PdfSigningViewModel = viewModel(factory = viewModelFactory {
+                val previewViewModel: PdfPreviewViewModel = viewModel(factory = viewModelFactory {
                     initializer {
-                        PdfSigningViewModel(
+                        PdfPreviewViewModel(
                             container.contentResolver,
                             { container.pdfiumCore },
                             Uri.parse(checkNotNull(entry.arguments?.getString("documentUri"))),
@@ -116,8 +117,12 @@ fun FirmaPdfApp(container: AppContainer) {
                     }
                 })
                 val previewState by previewViewModel.uiState.collectAsStateWithLifecycle()
-                PdfSigningScreen(
+                val signatureViewModel: PdfSignatureViewModel = viewModel(factory = viewModelFactory {
+                    initializer { PdfSignatureViewModel(container.savedSignatureStore) }
+                })
+                PdfPreviewScreen(
                     state = previewState,
+                    signatures = signatureViewModel,
                     onRetry = previewViewModel::reload,
                     onBack = { navController.popBackStack() },
                     onCreateSignature = { navController.navigate(Routes.SIGNATURE) { launchSingleTop = true } },
@@ -125,7 +130,7 @@ fun FirmaPdfApp(container: AppContainer) {
             }
             composable(Routes.SIGNATURE) {
                 val signatureModel: CreateSignatureViewModel = viewModel(factory = viewModelFactory {
-                    initializer { CreateSignatureViewModel(container.signatureStore) }
+                    initializer { CreateSignatureViewModel(container.savedSignatureStore) }
                 })
                 CreateSignatureScreen(model = signatureModel, onBack = { navController.popBackStack() })
             }

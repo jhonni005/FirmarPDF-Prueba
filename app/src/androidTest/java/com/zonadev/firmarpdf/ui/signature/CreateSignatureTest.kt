@@ -1,6 +1,5 @@
 package com.zonadev.firmarpdf.ui.signature
 
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
@@ -28,7 +27,8 @@ class CreateSignatureTest {
     @After fun clean() { directory.listFiles()?.forEach { it.delete() }; directory.delete() }
 
     @Test fun canvasUndoDiscardClearAndSave() {
-        val model = CreateSignatureViewModel(SignatureStore(directory))
+        val store = SavedSignatureStore(directory)
+        val model = CreateSignatureViewModel(store)
         var returned = false
         compose.setContent { FirmarPDFTheme { CreateSignatureScreen(model, { returned = true }, Modifier.requiredHeight(400.dp)) } }
         compose.onNodeWithText("Guardar firma").assertIsDisplayed()
@@ -57,7 +57,7 @@ class CreateSignatureTest {
         draw()
         compose.onNodeWithText("Guardar firma").performClick()
         compose.waitUntil(5_000) { returned }
-        val bitmap = BitmapFactory.decodeFile(File(directory, "signature.png").path)
+        val bitmap = runBlocking { checkNotNull(store.load(store.list().single())) }
         try {
             assertEquals(0, Color.alpha(bitmap.getPixel(0, 0)))
             val pixels = IntArray(bitmap.width * bitmap.height)
@@ -68,7 +68,7 @@ class CreateSignatureTest {
 
     @Test fun eachStrokeKeepsItsSettingsAndFailedSaveKeepsTheDrawing() {
         directory.writeText("Block directory creation to simulate storage failure")
-        val model = CreateSignatureViewModel(SignatureStore(directory))
+        val model = CreateSignatureViewModel(SavedSignatureStore(directory))
         compose.setContent { FirmarPDFTheme { CreateSignatureScreen(model, {}) } }
         compose.runOnIdle {
             model.begin(SignaturePoint(.2f, .2f), .01f); model.finish()
@@ -84,13 +84,23 @@ class CreateSignatureTest {
         compose.runOnIdle { assertEquals(2, model.strokes.size) }
     }
 
-    @Test fun pngRetainsBothColorsAndReplacesPreviousSignature() = runBlocking {
-        val store = SignatureStore(directory)
+    @Test fun pngRetainsBothColorsAndPreservesOtherSignatures() = runBlocking {
+        val store = SavedSignatureStore(directory)
         val first = SignatureStroke(Color.BLACK, .02f, listOf(SignaturePoint(.2f, .2f)))
         val second = SignatureStroke(Color.RED, .04f, listOf(SignaturePoint(.8f, .8f)))
-        store.save(listOf(first), 1f)
-        store.save(listOf(first, second), 1f)
-        val bitmap = BitmapFactory.decodeFile(File(directory, "signature.png").path)
+        val firstId = store.save(listOf(first), 1f)
+        val firstBytes = File(directory, "$firstId.png").readBytes()
+        // Simular una instalación anterior sin sobrescribir su PNG al guardar.
+        val legacy = File(directory, "signature.png")
+        legacy.writeBytes(firstBytes)
+        val secondId = store.save(listOf(first, second), 1f)
+        assertNotEquals(firstId, secondId)
+        assertEquals(setOf("signature", firstId, secondId), store.list().toSet())
+        assertArrayEquals(firstBytes, File(directory, "$firstId.png").readBytes())
+        assertArrayEquals(firstBytes, legacy.readBytes())
+        val reopened = SavedSignatureStore(directory)
+        assertEquals(store.list(), reopened.list())
+        val bitmap = checkNotNull(reopened.load(secondId))
         try {
             val pixels = IntArray(bitmap.width * bitmap.height)
             bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
@@ -98,6 +108,21 @@ class CreateSignatureTest {
             assertTrue(pixels.any { it == Color.RED })
             assertTrue(pixels.any { Color.alpha(it) == 0 })
         } finally { bitmap.recycle() }
-        assertEquals(listOf("signature.png"), directory.list()?.toList())
+        checkNotNull(reopened.load("signature")).recycle()
+        checkNotNull(reopened.load(firstId)).recycle()
+        assertTrue(reopened.delete(secondId))
+        assertFalse(reopened.delete(secondId))
+        assertNull(reopened.load(secondId))
+        assertEquals(setOf("signature", firstId), reopened.list().toSet())
+        assertArrayEquals(firstBytes, legacy.readBytes())
+        assertArrayEquals(firstBytes, File(directory, "$firstId.png").readBytes())
+        // Un guardado rechazado conserva todos los PNG anteriores.
+        try {
+            reopened.save(listOf(first), Float.NaN)
+            fail("El guardado debía rechazar una proporción inválida")
+        } catch (_: IllegalArgumentException) { }
+        assertEquals(setOf("signature", firstId), reopened.list().toSet())
+        assertArrayEquals(firstBytes, legacy.readBytes())
+        assertArrayEquals(firstBytes, File(directory, "$firstId.png").readBytes())
     }
 }
