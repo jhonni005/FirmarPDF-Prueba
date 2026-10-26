@@ -1,7 +1,47 @@
 package com.zonadev.firmarpdf.data.pdf
 
+import com.zonadev.firmarpdf.data.signature.PdfSignaturePlacement
+
 data class PdfExportPoint(val x: Float, val y: Float)
 data class PdfExportMatrix(val a: Float, val b: Float, val c: Float, val d: Float, val e: Float, val f: Float)
+
+/** Fórmulas de normalizedPlacementToPdfMatrix de LectorDocumentos, adaptadas a los modelos locales. */
+fun normalizedSignaturePlacementToPdfMatrix(placement: PdfSignaturePlacement, pageBox: PdfExportPage): PdfExportMatrix {
+    val rotation = ((pageBox.rotation % 360) + 360) % 360
+    val visualWidth = if (rotation == 90 || rotation == 270) {
+        pageBox.height
+    } else {
+        pageBox.width
+    }
+    val visualHeight = if (rotation == 90 || rotation == 270) {
+        pageBox.width
+    } else {
+        pageBox.height
+    }
+    val visualX = placement.x.coerceIn(0f, 1f) * visualWidth
+    val visualY = placement.y.coerceIn(0f, 1f) * visualHeight
+    val visualPlacementWidth = placement.width.coerceIn(0f, 1f) * visualWidth
+    val visualPlacementHeight = placement.height.coerceIn(0f, 1f) * visualHeight
+    return when (rotation) {
+        90 -> PdfExportMatrix(
+            a = 0f, b = visualPlacementWidth, c = -visualPlacementHeight, d = 0f,
+            e = pageBox.left + visualY + visualPlacementHeight, f = pageBox.bottom + visualX,
+        )
+        180 -> PdfExportMatrix(
+            a = -visualPlacementWidth, b = 0f, c = 0f, d = -visualPlacementHeight,
+            e = pageBox.left + pageBox.width - visualX, f = pageBox.bottom + visualY + visualPlacementHeight,
+        )
+        270 -> PdfExportMatrix(
+            a = 0f, b = -visualPlacementWidth, c = visualPlacementHeight, d = 0f,
+            e = pageBox.left + pageBox.width - visualY - visualPlacementHeight,
+            f = pageBox.bottom + pageBox.height - visualX,
+        )
+        else -> PdfExportMatrix(
+            a = visualPlacementWidth, b = 0f, c = 0f, d = visualPlacementHeight,
+            e = pageBox.left + visualX, f = pageBox.bottom + pageBox.height - visualY - visualPlacementHeight,
+        )
+    }
+}
 
 /** La vista tiene origen arriba a la izquierda del CropBox ya girado. PDF usa espacio sin girar. */
 class PdfExportPage(val left: Float, val bottom: Float, val width: Float, val height: Float, rotation: Int) {

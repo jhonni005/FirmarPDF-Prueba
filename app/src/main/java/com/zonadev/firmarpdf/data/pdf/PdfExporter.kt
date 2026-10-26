@@ -194,36 +194,74 @@ class PdfExporter(
     }
 
     private suspend fun append(doc: PDDocument, draft: PdfExportDraft) {
-        val images = mutableMapOf<String, PDImageXObject>()
-        for (id in draft.signatures.map { it.signatureId }.distinct()) {
+        // Conservar el orden visual, con un stream independiente para cada herramienta.
+        appendDrawings(doc, draft.strokes)
+        appendSignatures(doc, draft.signatures)
+        appendDates(doc, draft.dates)
+    }
+
+    /** Adaptación de appendSignatures de LectorDocumentos: solo imágenes, sin recorte previo. */
+    private suspend fun appendSignatures(doc: PDDocument, placements: List<PdfSignaturePlacement>) {
+        val imageCache = mutableMapOf<String, PDImageXObject>()
+        for ((pageIndex, pagePlacements) in placements.groupBy { it.pageIndex }) {
             coroutineContext.ensureActive()
-            val bitmap = signatures.load(id) ?: throw PdfExportException(PdfExportError.ANNOTATIONS)
-            try { images[id] = LosslessFactory.createFromImage(doc, bitmap) } finally { bitmap.recycle() }
+            if (pageIndex !in 0 until doc.numberOfPages) throw PdfExportException(PdfExportError.INVALID)
+            val page = doc.getPage(pageIndex)
+            val cropBox = page.cropBox ?: page.mediaBox
+            val pageBox = PdfExportPage(cropBox.lowerLeftX, cropBox.lowerLeftY, cropBox.width, cropBox.height, page.rotation)
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { contentStream ->
+                for (placement in pagePlacements) {
+                    coroutineContext.ensureActive()
+                    val image = imageCache.getOrPut(placement.signatureId) {
+                        // load sin muestreo usa BitmapFactory.decodeFile sobre el PNG privado.
+                        val bitmap = signatures.load(placement.signatureId)
+                            ?: throw PdfExportException(PdfExportError.ANNOTATIONS)
+                        try { LosslessFactory.createFromImage(doc, bitmap) } finally { bitmap.recycle() }
+                    }
+                    val transform = normalizedSignaturePlacementToPdfMatrix(placement, pageBox)
+                    contentStream.drawImage(image, Matrix(transform.a, transform.b, transform.c, transform.d, transform.e, transform.f))
+                }
+            }
         }
-        val pages = (draft.signatures.map { it.pageIndex } + draft.dates.map { it.placement.pageIndex } + draft.strokes.map { it.pageIndex }).toSortedSet()
-        for (index in pages) {
+    }
+
+    private suspend fun appendDrawings(doc: PDDocument, strokes: List<PdfExportStroke>) {
+        for ((pageIndex, pageStrokes) in strokes.groupBy { it.pageIndex }) {
             coroutineContext.ensureActive()
-            if (index !in 0 until doc.numberOfPages) throw PdfExportException(PdfExportError.INVALID)
-            val page = doc.getPage(index)
+            if (pageIndex !in 0 until doc.numberOfPages) throw PdfExportException(PdfExportError.INVALID)
+            val page = doc.getPage(pageIndex)
             val crop = page.cropBox ?: page.mediaBox
             val geometry = PdfExportPage(crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation)
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { content ->
-                content.addRect(crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height)
-                content.clip()
-                // Mismo orden base que las capas visuales: dibujo debajo de firmas/fechas.
-                for (stroke in draft.strokes.filter { it.pageIndex == index }) {
-                    coroutineContext.ensureActive()
-                    drawStroke(content, geometry, stroke)
-                }
-                fun drawImage(image: PDImageXObject, placement: PdfSignaturePlacement) {
-                    val matrix = geometry.image(placement.x, placement.y, placement.width, placement.height)
-                    content.drawImage(image, Matrix(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f))
-                }
-                for (placement in draft.signatures.filter { it.pageIndex == index }) drawImage(checkNotNull(images[placement.signatureId]), placement)
-                for (date in draft.dates.filter { it.placement.pageIndex == index }) {
-                    val bitmap = date.image ?: throw PdfExportException(PdfExportError.ANNOTATIONS)
-                    drawImage(LosslessFactory.createFromImage(doc, bitmap), date.placement)
-                }
+                content.saveGraphicsState()
+                try {
+                    for (stroke in pageStrokes) {
+                        coroutineContext.ensureActive()
+                        drawStroke(content, geometry, stroke)
+                    }
+                } finally { content.restoreGraphicsState() }
+            }
+        }
+    }
+
+    private suspend fun appendDates(doc: PDDocument, dates: List<PdfExportDate>) {
+        for ((pageIndex, pageDates) in dates.groupBy { it.placement.pageIndex }) {
+            coroutineContext.ensureActive()
+            if (pageIndex !in 0 until doc.numberOfPages) throw PdfExportException(PdfExportError.INVALID)
+            val page = doc.getPage(pageIndex)
+            val crop = page.cropBox ?: page.mediaBox
+            val geometry = PdfExportPage(crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation)
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { content ->
+                content.saveGraphicsState()
+                try {
+                    for (date in pageDates) {
+                        coroutineContext.ensureActive()
+                        val bitmap = date.image ?: throw PdfExportException(PdfExportError.ANNOTATIONS)
+                        val placement = date.placement
+                        val matrix = geometry.image(placement.x, placement.y, placement.width, placement.height)
+                        content.drawImage(LosslessFactory.createFromImage(doc, bitmap), Matrix(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f))
+                    }
+                } finally { content.restoreGraphicsState() }
             }
         }
     }
