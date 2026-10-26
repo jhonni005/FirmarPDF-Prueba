@@ -59,6 +59,18 @@ y el APK completo tienen sus comprobaciones registradas en BACKLOG.
   `nativeSaveAsCopy` comprueba también ese estado y conserva excepciones pendientes.
 - `initLibraryIfNeed`: se elimina el unlock explícito además de lock_guard, que
   suponía desbloquear dos veces el mismo mutex al abrir documentos.
+- `getBlock`/FPDF_FILEACCESS: contexto DocumentFile propio, lectura completa con
+  pread64 en bucle, reintento EINTR y fallo ante EOF anticipado/error/rango inválido,
+  sin modificar la posición compartida del descriptor. fstat64 y validación del
+  límite unsigned long evitan truncar tamaño/offset en las ABI de 32 bits.
+- `PdfDocument.saveAsCopy` conserva el lock global y mide su espera; el puente mide
+  FPDF_SaveAsCopy, lecturas de origen y callbacks de salida/preparación JNI.
+  Diagnóstico explícito por documento, solo activado por el exportador debug y
+  rechazado con NDEBUG; los contadores nativos se reinician por guardado y solo
+  acumulan durante FPDF_SaveAsCopy. `PdfSaveDiagnostics` contiene la instantánea
+  antes del cierre, también para fallos/cancelación. No hay logs por bloque ni
+  reutilización de buffers JNI. Los intervalos se detallan en arquitectura §25 y
+  su verificación en PERF-PDFIUM-002 de BACKLOG.
 
 El exportador de la app llama a `saveAsCopy` con `FPDF_NO_INCREMENTAL` explícito.
 Las API upstream y sus constantes se conservan para compatibilidad del binding;

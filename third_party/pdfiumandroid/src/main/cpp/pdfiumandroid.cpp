@@ -1,5 +1,10 @@
 #include <jni.h>
 #include <string>
+#include <algorithm>
+#include <cerrno>
+#include <cstdint>
+#include <limits>
+#include <time.h>
 
 
 extern "C" {
@@ -86,10 +91,50 @@ bool jniDetachCurrentThread(bool attached) {
     return true;
 }
 
+// Per-document, reset for every save. Never shared with another document or the viewer.
+struct NativeSaveMetrics {
+    uint64_t nativeSaveNanos = 0;
+    uint64_t sourceReadCalls = 0;
+    uint64_t sourceReadBytes = 0;
+    uint64_t sourceReadSmallCalls = 0;
+    uint64_t sourceReadNanos = 0;
+    uint64_t preadCalls = 0;
+    uint64_t shortReads = 0;
+    uint64_t readErrors = 0;
+    uint64_t nativeWriteCallbackNanos = 0;
+    uint64_t jniArrayPrepareNanos = 0;
+};
+
+// Does not read the clock when diagnostics are disabled. RAII covers all return/error paths.
+class AccumulateSaveNanos {
+    uint64_t* total;
+    uint64_t start = 0;
+    static uint64_t now() noexcept {
+        // Same Android elapsed clock domain as SystemClock.elapsedRealtimeNanos(), including sleep.
+        struct timespec value{};
+        if (clock_gettime(CLOCK_BOOTTIME, &value) != 0) return 0;
+        return static_cast<uint64_t>(value.tv_sec) * 1000000000ULL + static_cast<uint64_t>(value.tv_nsec);
+    }
+public:
+    explicit AccumulateSaveNanos(uint64_t* total) : total(total) {
+        if (total) start = now();
+    }
+    ~AccumulateSaveNanos() {
+        if (total) {
+            const uint64_t end = now();
+            if (start && end >= start) *total += end - start;
+        }
+    }
+};
+
 class DocumentFile {
 
 public:
     FPDF_DOCUMENT pdfDocument = nullptr;
+    int sourceFd = -1; // Borrowed: the Kotlin ParcelFileDescriptor owns its lifetime.
+    bool saveDiagnosticsEnabled = false;
+    bool measuringSave = false;
+    NativeSaveMetrics saveMetrics;
 
 public:
     jobject nativeSourceBridgeGlobalRef = nullptr;
@@ -126,11 +171,11 @@ inline typename string_type::value_type* WriteInto(string_type* str, size_t leng
     return &((*str)[0]);
 }
 
-inline long getFileSize(int fd){
-    struct stat file_state{};
+inline uint64_t getFileSize(int fd){
+    struct stat64 file_state{};
 
-    if(fstat(fd, &file_state) >= 0){
-        return (long)(file_state.st_size);
+    if(fstat64(fd, &file_state) >= 0 && file_state.st_size >= 0){
+        return static_cast<uint64_t>(file_state.st_size);
     }else{
         LOGE("Error getting file size");
         return 0;
@@ -254,11 +299,43 @@ jmethodID readMethod;
 extern "C"
 int getBlock(void* param, unsigned long position, unsigned char* outBuffer,
                     unsigned long size) {
-    const int fd = reinterpret_cast<intptr_t>(param);
-    const int readCount = pread(fd, outBuffer, size, (long) position);
-    if (readCount < 0) {
-        LOGE("Cannot read from file descriptor. Error:%d", errno);
+    auto* file = static_cast<DocumentFile*>(param);
+    auto* metrics = file && file->saveDiagnosticsEnabled && file->measuringSave ? &file->saveMetrics : nullptr;
+    AccumulateSaveNanos elapsed(metrics ? &metrics->sourceReadNanos : nullptr);
+    if (metrics) {
+        ++metrics->sourceReadCalls;
+        if (size < 1024) ++metrics->sourceReadSmallCalls;
+    }
+    const uint64_t offset = position;
+    const uint64_t requested = size;
+    const auto maxOffset = static_cast<uint64_t>(std::numeric_limits<off64_t>::max());
+    if (!file || file->sourceFd < 0 || (size && !outBuffer) ||
+        requested > std::numeric_limits<size_t>::max() || offset > maxOffset || requested > maxOffset - offset) {
+        if (metrics) ++metrics->readErrors;
         return 0;
+    }
+    size_t completed = 0;
+    while (completed < static_cast<size_t>(requested)) {
+        const size_t chunk = std::min(static_cast<size_t>(requested) - completed,
+                                     static_cast<size_t>(std::numeric_limits<ssize_t>::max()));
+        if (metrics) ++metrics->preadCalls;
+        // Positional I/O: never lseek/read or change the shared descriptor offset.
+        const ssize_t count = pread64(file->sourceFd, outBuffer + completed, chunk,
+                                     static_cast<off64_t>(offset + completed));
+        if (count < 0) {
+            if (errno == EINTR) continue;
+            if (metrics) ++metrics->readErrors;
+            return 0;
+        }
+        if (count == 0) { // EOF before the requested block was complete.
+            if (metrics) ++metrics->readErrors;
+            return 0;
+        }
+        if (metrics) {
+            metrics->sourceReadBytes += static_cast<uint64_t>(count);
+            if (static_cast<size_t>(count) < chunk) ++metrics->shortReads;
+        }
+        completed += static_cast<size_t>(count);
     }
     return 1;
 }
@@ -296,18 +373,19 @@ extern "C"
 JNIEXPORT jlong JNICALL
 Java_io_legere_pdfiumandroid_PdfiumCore_nativeOpenDocument(JNIEnv *env, jobject, jint fd,
                                                            jstring password) {
-    auto fileLength = (size_t)getFileSize(fd);
-    if(fileLength <= 0) {
+    const uint64_t fileLength = getFileSize(fd);
+    if(fileLength == 0 || fileLength > std::numeric_limits<unsigned long>::max()) {
         jniThrowException(env, "java/io/IOException",
-                          "File is empty");
+                          "File is empty or exceeds FPDF_FILEACCESS size limits");
         return -1;
     }
 
     auto *docFile = new DocumentFile();
+    docFile->sourceFd = fd;
 
-    FPDF_FILEACCESS loader;
-    loader.m_FileLen = fileLength;
-    loader.m_Param = reinterpret_cast<void*>(intptr_t(fd));
+    FPDF_FILEACCESS loader{};
+    loader.m_FileLen = static_cast<unsigned long>(fileLength);
+    loader.m_Param = docFile;
     loader.m_GetBlock = &getBlock;
 
     const char *cpassword = nullptr;
@@ -555,18 +633,24 @@ public:
     jmethodID callbackMethodID;
     _JNIEnv *env;
     bool failed = false;
+    NativeSaveMetrics* metrics = nullptr;
 
     static int WriteBlockCallback(FPDF_FILEWRITE* pFileWrite, const void* data, unsigned long size) {
         auto* pThis = reinterpret_cast<FileWrite*>(pFileWrite);
+        AccumulateSaveNanos callbackElapsed(pThis->metrics ? &pThis->metrics->nativeWriteCallbackNanos : nullptr);
         _JNIEnv *env = pThis->env;
         if (pThis->failed || env->ExceptionCheck()) return 0;
         if (size > static_cast<unsigned long>(INT32_MAX) || (size && !data)) {
             pThis->failed = true;
             return 0; // FPDF_FILEWRITE requires zero on failure; -1 would mean success.
         }
-        jbyteArray a = env->NewByteArray(static_cast<jsize>(size));
-        if (!a) { pThis->failed = true; return 0; }
-        env->SetByteArrayRegion(a, 0, static_cast<jsize>(size), static_cast<const jbyte*>(data));
+        jbyteArray a;
+        {
+            AccumulateSaveNanos prepareElapsed(pThis->metrics ? &pThis->metrics->jniArrayPrepareNanos : nullptr);
+            a = env->NewByteArray(static_cast<jsize>(size));
+            if (!a) { pThis->failed = true; return 0; }
+            env->SetByteArrayRegion(a, 0, static_cast<jsize>(size), static_cast<const jbyte*>(data));
+        }
         jint result = 0;
         if (!env->ExceptionCheck()) result = env->CallIntMethod(pThis->callbackObject, pThis->callbackMethodID, a);
         env->DeleteLocalRef(a); // Potentially thousands of blocks in one native save call.
@@ -909,6 +993,9 @@ JNIEXPORT jboolean JNICALL
 Java_io_legere_pdfiumandroid_PdfDocument_nativeSaveAsCopy(JNIEnv *env, jobject, jlong doc_ptr,
                                                           jobject callback, jint flags) {
     try {
+        auto *doc = reinterpret_cast<DocumentFile *>(doc_ptr);
+        if (!doc || !doc->pdfDocument) return false;
+        if (doc->saveDiagnosticsEnabled) doc->saveMetrics = {};
         jclass callbackClass = env->FindClass("io/legere/pdfiumandroid/PdfWriteCallback");
         if (!callbackClass) return false;
         if (callback != nullptr && env->IsInstanceOf(callback, callbackClass)) {
@@ -922,9 +1009,20 @@ Java_io_legere_pdfiumandroid_PdfDocument_nativeSaveAsCopy(JNIEnv *env, jobject, 
             env->DeleteLocalRef(callbackClass);
             if (!fw.callbackMethodID || env->ExceptionCheck()) return false;
 
-            auto *doc = reinterpret_cast<DocumentFile *>(doc_ptr);
-            if (!doc || !doc->pdfDocument) return false;
-            const auto saved = FPDF_SaveAsCopy(doc->pdfDocument, &fw, flags);
+            fw.metrics = doc->saveDiagnosticsEnabled ? &doc->saveMetrics : nullptr;
+            FPDF_BOOL saved;
+            {
+                // Only this interval counts source reads. Setup and opening/insertion are excluded.
+                struct SaveInterval {
+                    DocumentFile* file;
+                    explicit SaveInterval(DocumentFile* file) : file(file) {
+                        file->measuringSave = file->saveDiagnosticsEnabled;
+                    }
+                    ~SaveInterval() { file->measuringSave = false; }
+                } interval(doc);
+                AccumulateSaveNanos nativeElapsed(fw.metrics ? &fw.metrics->nativeSaveNanos : nullptr);
+                saved = FPDF_SaveAsCopy(doc->pdfDocument, &fw, flags);
+            }
             return saved && !fw.failed && !env->ExceptionCheck();
         }
         env->DeleteLocalRef(callbackClass);
@@ -942,6 +1040,39 @@ Java_io_legere_pdfiumandroid_PdfDocument_nativeSaveAsCopy(JNIEnv *env, jobject, 
         raise_java_exception(env, e);
     }
     return false;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_legere_pdfiumandroid_PdfDocument_nativeSetSaveDiagnosticsEnabled(
+        JNIEnv*, jobject, jlong doc_ptr, jboolean enabled) {
+    auto* doc = reinterpret_cast<DocumentFile*>(doc_ptr);
+    if (!doc) return false;
+#ifndef NDEBUG
+    doc->saveDiagnosticsEnabled = enabled == JNI_TRUE;
+#else
+    doc->saveDiagnosticsEnabled = false;
+#endif
+    doc->saveMetrics = {};
+    return doc->saveDiagnosticsEnabled;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_legere_pdfiumandroid_PdfDocument_nativeCopySaveDiagnostics(
+        JNIEnv* env, jobject, jlong doc_ptr, jlongArray values) {
+    auto* doc = reinterpret_cast<DocumentFile*>(doc_ptr);
+    if (!doc || !values || env->GetArrayLength(values) != 10) {
+        jniThrowException(env, "java/lang/IllegalArgumentException", "Invalid save diagnostic buffer");
+        return;
+    }
+    const auto& m = doc->saveMetrics;
+    const jlong snapshot[] = {
+        static_cast<jlong>(m.nativeSaveNanos), static_cast<jlong>(m.sourceReadCalls),
+        static_cast<jlong>(m.sourceReadBytes), static_cast<jlong>(m.sourceReadSmallCalls),
+        static_cast<jlong>(m.sourceReadNanos), static_cast<jlong>(m.preadCalls),
+        static_cast<jlong>(m.shortReads), static_cast<jlong>(m.readErrors),
+        static_cast<jlong>(m.nativeWriteCallbackNanos), static_cast<jlong>(m.jniArrayPrepareNanos)
+    };
+    env->SetLongArrayRegion(values, 0, 10, snapshot);
 }
 
 extern "C"
@@ -3478,6 +3609,8 @@ static const JNINativeMethod textPageMethods[] = {
 };
 
 static const JNINativeMethod documentMethods[] = {
+        {"nativeSetSaveDiagnosticsEnabled", "(JZ)Z", (void *) Java_io_legere_pdfiumandroid_PdfDocument_nativeSetSaveDiagnosticsEnabled},
+        {"nativeCopySaveDiagnostics", "(J[J)V", (void *) Java_io_legere_pdfiumandroid_PdfDocument_nativeCopySaveDiagnostics},
         {"nativeGetSignatureExportRestriction", "(J)I", (void *) Java_io_legere_pdfiumandroid_PdfDocument_nativeGetSignatureExportRestriction},
         {"nativeGetPageCount",          "(J)I",                                            (void *) Java_io_legere_pdfiumandroid_PdfDocument_nativeGetPageCount},
         {"nativeLoadPage",              "(JI)J",                                           (void *) Java_io_legere_pdfiumandroid_PdfDocument_nativeLoadPage},

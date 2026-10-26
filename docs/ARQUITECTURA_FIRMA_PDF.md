@@ -493,7 +493,9 @@ sin mover ni redimensionar las mismas firmas.
 Solo debug registra una línea final mediante `Log.d("PdfiumExportTiming", ...)`,
 independiente del logger configurable del visor y de Firebase. Se conserva el
 resumen existente y sus campos. Se acumulan nanosegundos de
-`SystemClock.elapsedRealtimeNanos()` y se convierten a milisegundos enteros al
+`SystemClock.elapsedRealtimeNanos()` en Kotlin y `clock_gettime(CLOCK_BOOTTIME)`
+en el puente nativo, relojes monotónicos de tiempo transcurrido que incluyen
+suspensión. Se convierten a milisegundos enteros al
 emitir, también con fallo/cancelación si se alcanza finally. Los campos de etapas
 originales mantienen sus alcances disjuntos; los contadores nuevos son mediciones
 anidadas, sin nombres, rutas, URI, contenido ni excepciones originales:
@@ -562,6 +564,73 @@ a totalMs ni atribuir a una sola etapa el trabajo de carga diferida. Alternar mo
 con el mismo original, firmas, posiciones, dispositivo/proveedor y condiciones,
 separar primera pasada de repeticiones y comparar totalMs, dispersión y etapas.
 No se deduce una mejora de rendimiento por compilar ni por una sola observación.
+
+### Lectura completa y diagnóstico nativo por documento
+
+`FPDF_FILEACCESS.m_Param` referencia ahora su `DocumentFile`, con un descriptor
+prestado cuya propiedad sigue siendo del ParcelFileDescriptor Kotlin. El contexto
+vive hasta terminar FPDF_CloseDocument; no se comparte con el documento del visor.
+`getBlock` usa `size_t` para tamaños, `ssize_t` para el retorno y `off64_t/pread64`
+para offsets, con comprobaciones de rango antes de convertir o sumar. Un bucle
+completa todos los bytes, avanza solo por los bytes realmente leídos, reintenta
+EINTR y devuelve cero ante EOF anticipado o error definitivo. No utiliza lseek/read
+ni cambia la posición compartida del descriptor. fstat64 evita truncar el tamaño;
+se rechazan longitudes no representables en el unsigned long de FPDF_FILEACCESS
+(especialmente en ABI de 32 bits), en vez de truncarlas silenciosamente.
+
+Cada DocumentFile tiene su propio estado de diagnóstico, desactivado inicialmente.
+Solo el exportador y solo con BuildConfig.DEBUG llama setSaveDiagnosticsEnabled(true).
+El puente rechaza la activación si se compila con NDEBUG. La corrección de lectura
+se aplica también al visor; el visor no activa ni acumula estas métricas.
+
+`PdfDocument.saveAsCopy` conserva el mismo synchronized(PdfiumCore.lock).
+Cronometra la espera antes de entrar y, manteniendo el lock, copia los diez valores
+nativos a un LongArray preasignado del documento y crea una instantánea inmutable
+`PdfSaveDiagnostics`. La captura en finally también se intenta al fallar saveAsCopy.
+El exportador conserva esa instantánea antes del cierre; cerrar/desactivar el
+documento limpia sus referencias Kotlin y destruir DocumentFile libera el estado
+nativo. No se obtiene un segundo lock para consultar métricas después del guardado.
+
+El puente reinicia los contadores al entrar en nativeSaveAsCopy. Activa el conteo
+de lectura justo alrededor de FPDF_SaveAsCopy y lo desactiva con RAII al salir,
+incluso ante excepción. Apertura, inserción, espera del lock y cierre del documento
+quedan fuera de ese intervalo. No hay contadores globales ni mezcla entre documentos.
+La instrumentación de FileWrite mantiene NewByteArray/SetByteArrayRegion por bloque,
+DeleteLocalRef, comprobaciones de excepciones y retorno cero ante fallo; no reutiliza
+arrays ni cambia el mecanismo de salida. No se emiten logs por lectura/escritura.
+
+Los campos siguientes se añaden a la misma línea PdfiumExportTiming:
+
+| Campo | Alcance |
+| --- | --- |
+| saveLockWaitMs | Tiempo antes de adquirir PdfiumCore.lock en saveAsCopy, con el pequeño coste de entrada/instrumentación; no sustituye ni elimina el lock. |
+| nativeSaveMs | Solo el intervalo C++ alrededor de FPDF_SaveAsCopy, después de configurar el callback y antes de copiar las métricas. Excluye la espera del lock y el vaciado final de salida. |
+| sourceReadCalls | Entradas en getBlock durante FPDF_SaveAsCopy de ese documento. |
+| sourceReadBytes | Bytes positivos realmente devueltos por pread64, también si una petición falla después de leer parcialmente. Puede superar inputBytes por relecturas; no mide bytes únicos ni lecturas de almacenamiento físico. |
+| sourceReadSmallCalls | Peticiones getBlock de menos de 1024 bytes, no el tamaño de cada reintento. |
+| sourceReadMs | Tiempo del callback getBlock completo, incluyendo validación, bucle, syscalls/reintentos y contadores; no es una medida exclusiva del dispositivo de almacenamiento. |
+| preadCalls | Syscalls reales pread64, incluidos reintentos EINTR y llamadas que devuelven error o EOF. |
+| shortReads | Retornos positivos de pread64 menores que el bloque solicitado en esa syscall. EOF cero se registra como readErrors, no aquí. |
+| readErrors | Peticiones getBlock fallidas por EOF anticipado, error definitivo o parámetros/rangos inválidos. EINTR recuperado no se considera error; las lecturas parciales recuperadas tampoco. |
+| nativeWriteCallbackMs | Tiempo acumulado del callback C++ completo: comprobaciones, preparación del array, llamada a Kotlin, DeleteLocalRef y comprobación final del resultado/excepciones. |
+| jniArrayPrepareMs | Subintervalo de NewByteArray y SetByteArrayRegion, incluida su preparación inmediata y caminos de fallo; excluye llamada Kotlin y limpieza posterior. |
+| nativeTimingAvailable | Hay instantánea del guardado nativo; false si no se llegó a guardar o el diagnóstico no estaba activo. En ese caso los campos nuevos numéricos se imprimen como cero. |
+
+`saveCallMs` histórico sigue incluyendo espera del lock, preparación/retorno JNI,
+nativeSaveMs y la copia final de métricas. Por ello saveLockWaitMs + nativeSaveMs
+no tiene por qué ser exactamente saveCallMs. `nativeWriteCallbackMs` contiene
+callbackMs Kotlin y jniArrayPrepareMs; no se suman de nuevo. sourceReadMs y
+nativeWriteCallbackMs pertenecen a nativeSaveMs. Parte de destWriteMs ya está dentro
+del callback y otra parte puede suceder después al vaciar el búfer. Todos son
+intervalos anidados, no costes adicionales al total.
+
+Se conservan los residuos anteriores: saveOtherMs = etapa completa menos callbacks
+Kotlin, y saveCallOtherMs = llamada pública menos callbacks Kotlin. Este último
+todavía incluye espera del lock, lecturas de origen, serialización, preparación
+JNI, captura de métricas y otros costes. No equivale a CPU pura ni se recalcula
+restándole indiscriminadamente campos solapados. La corrección y la próxima
+medición del usuario se registran en PERF-PDFIUM-002 de BACKLOG, sin atribuir de
+antemano una causa al tiempo observado.
 
 El resultado de compilación/empaquetado y las comprobaciones manuales de color,
 transparencia, posición, rotación, CropBox, varias páginas, visores externos,

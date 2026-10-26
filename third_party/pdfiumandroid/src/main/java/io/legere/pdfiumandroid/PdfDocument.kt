@@ -5,6 +5,7 @@ package io.legere.pdfiumandroid
 import android.graphics.Matrix
 import android.graphics.RectF
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.view.Surface
 import io.legere.pdfiumandroid.util.handleAlreadyClosed
 import java.io.Closeable
@@ -21,6 +22,24 @@ class PdfDocument(
 ) : Closeable {
     private val pageMap = mutableMapOf<Int, PageCount>()
     private val textPageMap = mutableMapOf<Int, PageCount>()
+
+    @Volatile private var saveDiagnosticsBuffer: LongArray? = null
+    @Volatile var lastSaveDiagnostics: PdfSaveDiagnostics? = null
+        private set
+
+    private external fun nativeSetSaveDiagnosticsEnabled(docPtr: Long, enabled: Boolean): Boolean
+    private external fun nativeCopySaveDiagnostics(docPtr: Long, values: LongArray)
+
+    /** Explicit opt-in on this document; native release builds refuse activation.
+     * The viewer remains disabled by default. No native pointers escape in the snapshot.
+     */
+    fun setSaveDiagnosticsEnabled(enabled: Boolean) {
+        synchronized(PdfiumCore.lock) {
+            check(!isClosed) { "Already closed" }
+            saveDiagnosticsBuffer = if (nativeSetSaveDiagnosticsEnabled(mNativeDocPtr, enabled)) LongArray(10) else null
+            lastSaveDiagnostics = null
+        }
+    }
 
     @Volatile
     var isClosed = false
@@ -438,9 +457,30 @@ class PdfDocument(
         callback: PdfWriteCallback,
         flags: Int = FPDF_NO_INCREMENTAL,
     ): Boolean {
+        val requestedBuffer = saveDiagnosticsBuffer
+        val waitStart = if (requestedBuffer != null) SystemClock.elapsedRealtimeNanos() else 0L
         synchronized(PdfiumCore.lock) {
+            val buffer = saveDiagnosticsBuffer
+            val lockWaitNanos = if (buffer != null && buffer === requestedBuffer) SystemClock.elapsedRealtimeNanos() - waitStart else 0L
+            lastSaveDiagnostics = null
+            buffer?.fill(0L)
             if (handleAlreadyClosed(isClosed)) return false
-            return nativeSaveAsCopy(mNativeDocPtr, callback, flags)
+            try {
+                return nativeSaveAsCopy(mNativeDocPtr, callback, flags)
+            } finally {
+                if (buffer != null) {
+                    // Still under the same lock; JNI copies into the preallocated per-document buffer.
+                    // Native capture is complete even if saveAsCopy returned false or threw.
+                    nativeCopySaveDiagnostics(mNativeDocPtr, buffer)
+                    lastSaveDiagnostics = PdfSaveDiagnostics(
+                        saveLockWaitNanos = lockWaitNanos,
+                        nativeSaveNanos = buffer[0], sourceReadCalls = buffer[1], sourceReadBytes = buffer[2],
+                        sourceReadSmallCalls = buffer[3], sourceReadNanos = buffer[4], preadCalls = buffer[5],
+                        shortReads = buffer[6], readErrors = buffer[7],
+                        nativeWriteCallbackNanos = buffer[8], jniArrayPrepareNanos = buffer[9],
+                    )
+                }
+            }
         }
     }
 
@@ -453,6 +493,8 @@ class PdfDocument(
             if (handleAlreadyClosed(isClosed)) return
             Logger.d(TAG, "PdfDocument.close")
             isClosed = true
+            saveDiagnosticsBuffer = null
+            lastSaveDiagnostics = null
             nativeCloseDocument(mNativeDocPtr)
             parcelFileDescriptor?.close()
             parcelFileDescriptor = null

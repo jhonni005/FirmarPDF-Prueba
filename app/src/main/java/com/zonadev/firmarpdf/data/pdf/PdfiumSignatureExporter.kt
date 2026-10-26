@@ -10,6 +10,7 @@ import com.zonadev.firmarpdf.BuildConfig
 import com.zonadev.firmarpdf.data.signature.SavedSignatureStore
 import io.legere.pdfiumandroid.PdfDocument
 import io.legere.pdfiumandroid.PdfPasswordException
+import io.legere.pdfiumandroid.PdfSaveDiagnostics
 import io.legere.pdfiumandroid.PdfWriteCallback
 import io.legere.pdfiumandroid.PdfiumCore
 import kotlinx.coroutines.CancellationException
@@ -50,6 +51,7 @@ class PdfiumSignatureExporter(
         var callbackDuringSaveNanos = 0L
         var saveCallNanos = 0L
         var saveIo: PdfSaveIoMetrics? = null
+        var nativeTiming: PdfSaveDiagnostics? = null
         var stage = PdfExportStage.SOURCE
         var category = "UNKNOWN"
         var success = false
@@ -92,6 +94,7 @@ class PdfiumSignatureExporter(
                 core().newDocument(fd).also {
                     document = it
                     ensureActive()
+                    if (BuildConfig.DEBUG) it.setSaveDiagnosticsEnabled(true)
                     if (it.getPageCount() <= 0 || it.getPageCount() != draft.expectedPageCount)
                         throw PdfExportException(PdfExportError.INVALID)
                     when (it.getSignatureExportRestriction()) {
@@ -180,6 +183,7 @@ class PdfiumSignatureExporter(
                                         // Capture only callbacks inside this call; the final buffer drain is later.
                                         saveCallNanos += SystemClock.elapsedRealtimeNanos() - saveClock
                                         callbackDuringSaveNanos += callbackNanos - callbacksBeforeSave
+                                        nativeTiming = doc.lastSaveDiagnostics
                                     }
                                 }
                                 callbackFailure?.let { throw it }
@@ -259,7 +263,17 @@ class PdfiumSignatureExporter(
                         "destWriteMs=${io.writeNanos / 1_000_000L} destFlushCloseMs=${io.flushCloseNanos / 1_000_000L} " +
                         "bufferBytes=${PdfSaveOutputStream.BUFFER_BYTES} saveOtherMs=${saveOtherNanos / 1_000_000L} " +
                         "saveCallMs=${saveCallNanos / 1_000_000L} saveCallOtherMs=${saveCallOtherNanos / 1_000_000L} " +
-                        "destination=${destination?.timingKind ?: "unopened"}")
+                        "destination=${destination?.timingKind ?: "unopened"} " +
+                        "saveLockWaitMs=${(nativeTiming?.saveLockWaitNanos ?: 0L) / 1_000_000L} " +
+                        "nativeSaveMs=${(nativeTiming?.nativeSaveNanos ?: 0L) / 1_000_000L} " +
+                        "sourceReadCalls=${nativeTiming?.sourceReadCalls ?: 0L} sourceReadBytes=${nativeTiming?.sourceReadBytes ?: 0L} " +
+                        "sourceReadSmallCalls=${nativeTiming?.sourceReadSmallCalls ?: 0L} " +
+                        "sourceReadMs=${(nativeTiming?.sourceReadNanos ?: 0L) / 1_000_000L} " +
+                        "preadCalls=${nativeTiming?.preadCalls ?: 0L} shortReads=${nativeTiming?.shortReads ?: 0L} " +
+                        "readErrors=${nativeTiming?.readErrors ?: 0L} " +
+                        "nativeWriteCallbackMs=${(nativeTiming?.nativeWriteCallbackNanos ?: 0L) / 1_000_000L} " +
+                        "jniArrayPrepareMs=${(nativeTiming?.jniArrayPrepareNanos ?: 0L) / 1_000_000L} " +
+                        "nativeTimingAvailable=${nativeTiming != null}")
             }
         }
     }
