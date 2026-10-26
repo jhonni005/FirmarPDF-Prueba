@@ -1,5 +1,19 @@
 package com.zonadev.firmarpdf.ui.pdf
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.zonadev.firmarpdf.data.pdf.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -55,9 +69,36 @@ import kotlinx.coroutines.launch
 @Composable
 fun PdfPreviewScreen(
     state: PdfPreviewState, signatures: PdfSignatureViewModel, dates: PdfDateViewModel, drawing: PdfDrawingViewModel,
-    onRetry: () -> Unit, onBack: () -> Unit, onCreateSignature: () -> Unit,
+    export: PdfExportViewModel,
+    onRetry: () -> Unit, onBack: () -> Unit, onGoHome: () -> Unit, onCreateSignature: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val exportState by export.uiState.collectAsStateWithLifecycle()
+    val signatureDraft by signatures.uiState.collectAsStateWithLifecycle()
+    val dateDraft by dates.uiState.collectAsStateWithLifecycle()
+    val drawingDraft by drawing.uiState.collectAsStateWithLifecycle()
+    val draft = PdfExportDraft(
+        signatureDraft.placements.toList(),
+        dateDraft.dates.map { PdfExportDate(it.placement, dateDraft.images[it.placement.id]) },
+        drawingDraft.strokes.map { PdfExportStroke(it.pageIndex, it.color, it.width, it.points.toList()) },
+        (state as? PdfPreviewState.Ready)?.session?.pageCount ?: 0,
+    )
+    val saving = exportState is PdfExportUiState.Saving
+    val context = LocalContext.current
+    val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) export.save(draft) else export.permissionDenied()
+    }
+    var discard by rememberSaveable { mutableStateOf(false) }
+    BackHandler {
+        if (saving || drawingDraft.active != null || export.hasUnsaved(draft)) discard = true else onBack()
+    }
+    if (discard) AlertDialog(
+        onDismissRequest = { discard = false },
+        title = { Text(stringResource(R.string.pdf_discard_title)) },
+        text = { Text(stringResource(R.string.pdf_discard_message)) },
+        confirmButton = { TextButton(onClick = { export.cancel(); discard = false; onBack() }) { Text(stringResource(R.string.signature_discard)) } },
+        dismissButton = { TextButton(onClick = { discard = false }) { Text(stringResource(R.string.cancel)) } },
+    )
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner, signatures) {
         val observer = LifecycleEventObserver { _, event ->
@@ -74,7 +115,13 @@ fun PdfPreviewScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(stringResource(R.string.preview_title), style = MaterialTheme.typography.titleLarge)
-            TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
+            TextButton(onClick = {
+                if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                } else export.save(draft)
+            }, enabled = state is PdfPreviewState.Ready && draft.hasAnnotations && !saving && !signatureDraft.busy && drawingDraft.active == null) {
+                Text(stringResource(R.string.pdf_save))
+            }
         }
         when (state) {
             PdfPreviewState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -91,9 +138,40 @@ fun PdfPreviewScreen(
             }
             is PdfPreviewState.Ready -> {
                 if (state.recentSaveFailed) Text(stringResource(R.string.recent_record_error), Modifier.padding(horizontal = 12.dp), color = MaterialTheme.colorScheme.error)
-                key(state.session) { PdfPages(state.session, signatures, dates, drawing) }
+                Box(Modifier.weight(1f)) {
+                    key(state.session) { PdfPages(state.session, signatures, dates, drawing) }
+                    if (saving) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface.copy(alpha = .95f)).pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                do { val event = awaitPointerEvent(); event.changes.forEach { it.consume() } } while (event.changes.any { it.pressed })
+                            }
+                        }, contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator()
+                                Text(stringResource(exportProgressText((exportState as PdfExportUiState.Saving).stage)))
+                                TextButton(onClick = export::cancel) { Text(stringResource(R.string.cancel)) }
+                            }
+                        }
+                    }
+                }
             }
         }
+        (exportState as? PdfExportUiState.Error)?.let { failure ->
+            Text(stringResource(exportErrorText(failure.reason)), Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = export::dismiss) { Text(stringResource(R.string.dismiss_error)) }
+        }
+    }
+    (exportState as? PdfExportUiState.Saved)?.result?.let { result ->
+        AlertDialog(onDismissRequest = export::dismiss,
+            title = { Text(stringResource(R.string.pdf_saved_title)) },
+            text = { Column {
+                Text(stringResource(R.string.pdf_saved_message, result.displayName))
+                if (!result.recorded) Text(stringResource(R.string.pdf_saved_history_failed))
+            } },
+            confirmButton = { TextButton(onClick = onGoHome) { Text(stringResource(R.string.pdf_go_home)) } },
+            dismissButton = { TextButton(onClick = export::dismiss) { Text(stringResource(R.string.pdf_stay)) } },
+        )
     }
 }
 
@@ -214,7 +292,6 @@ private fun PdfPages(session: PdfPreviewSession, signatures: PdfSignatureViewMod
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.preview_page, (target()?.page?.pageIndex ?: list.firstVisibleItemIndex) + 1, session.pageCount))
-            Text(stringResource(R.string.preview_zoom, (zoom.scale * 100).toInt()))
         }
         Box(
             Modifier.fillMaxWidth().weight(1f).clipToBounds()
@@ -275,4 +352,25 @@ private fun PdfPages(session: PdfPreviewSession, signatures: PdfSignatureViewMod
     if (dateState.sheetVisible) PdfDateFormatSheet(dates::dismissSheet, { format ->
         scope.launch { list.stopScroll(); dates.choose(format, target()) }
     }, dateState.error)
+}
+
+private fun exportProgressText(stage: PdfExportStage) = when (stage) {
+    PdfExportStage.SOURCE -> R.string.pdf_export_source
+    PdfExportStage.LOAD -> R.string.pdf_export_load
+    PdfExportStage.ANNOTATE -> R.string.pdf_export_annotate
+    PdfExportStage.SAVE -> R.string.pdf_export_write
+    PdfExportStage.PUBLISH -> R.string.pdf_export_verify
+}
+
+private fun exportErrorText(reason: PdfExportError) = when (reason) {
+    PdfExportError.SOURCE -> R.string.pdf_export_source_error
+    PdfExportError.PROTECTED -> R.string.pdf_export_protected
+    PdfExportError.CERTIFIED -> R.string.pdf_export_certified
+    PdfExportError.INVALID -> R.string.pdf_export_invalid
+    PdfExportError.ANNOTATIONS -> R.string.pdf_export_annotations_error
+    PdfExportError.WRITE -> R.string.pdf_export_write_error
+    PdfExportError.VERIFY -> R.string.pdf_export_verify_error
+    PdfExportError.BUSY -> R.string.pdf_export_busy
+    PdfExportError.MEMORY -> R.string.pdf_export_memory
+    PdfExportError.PERMISSION -> R.string.pdf_export_permission
 }

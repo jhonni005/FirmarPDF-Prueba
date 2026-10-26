@@ -40,7 +40,7 @@ Adobe documenta que Acrobat móvil permite rellenar, firmar y compartir sin susc
 - Insertar una o varias colocaciones de esa firma en las páginas necesarias; mover, redimensionar y eliminar antes de exportar.
 - Firmar y exportar PDF ilimitados sin paywall. Para documentos entrantes desde Gmail/WhatsApp y fuentes de solo lectura, guardar un archivo nuevo en `Documents/FirmarPdf/` y permitir compartirlo.
 - Mostrar en Home una lista de PDF firmados; Room conserva URI y metadatos de resultado, no los bytes del PDF. El resultado debe poder reabrirse tras reiniciar la app.
-- Para PDF elegidos con SAF, considerar actualización del original solo después de demostrar guardado recuperable ante errores; si no, generar resultado nuevo. No usar `saveIncremental` ni un diálogo para elegir modo.
+- Para cualquier PDF, incluido SAF, guardar siempre un archivo nuevo en Documents/FirmarPdf/. Nunca modificar el original ni usar saveIncremental.
 - Mostrar errores recuperables y una confirmación que permita abrir el resultado.
 - Flujo completo con archivos locales en modo avión, sin anuncios, cuenta ni compra.
 - Crashlytics y eventos mínimos, con recopilación opcional y separada del procesamiento local.
@@ -60,7 +60,7 @@ La función inicial añade una representación de firma manuscrita al PDF. No at
 ## 4. Flujo y pantallas
 
 1. **Inicio:** acción principal «Firmar un PDF», historial Room de resultados firmados, acceso discreto a firma guardada y ajustes. El usuario que comparte un archivo desde otra app entra directamente al editor si el documento es válido.
-2. **Editor:** documento como protagonista, controles de página/zoom y herramientas de firma. Acción «Guardar» sin diálogo de modo; informar tras terminar si se actualizó el original o dónde se creó el archivo nuevo.
+2. **Editor:** documento como protagonista, controles de página/zoom y herramientas de firma. Acción «Guardar» sin diálogo de modo; informar tras terminar dónde se creó el archivo nuevo. El original permanece intacto.
 3. **Crear firma:** pantalla vertical con colores, grosor, lienzo, borrar/deshacer y guardado permanente de cada firma. No existe «Usar solo esta vez».
 4. **Resultado:** confirmar solo cuando termine la escritura; abrir, compartir o volver a firmar. Evitar obligar a guardar dos veces para compartir.
 
@@ -72,7 +72,7 @@ No se necesita una navegación inferior con seis secciones. El historial pequeñ
 
 El documento de arquitectura de LectorDocumentos describe PDFium, dibujo y geometría de firma, biblioteca local y un exportador con PDFBox. Son candidatos a reutilizar, no una garantía de extracción inmediata: falta inspeccionar sus dependencias reales.
 
-Primer trabajo técnico en el proyecto ya creado: lograr que un PDF de prueba entre, reciba una firma y salga como archivo nuevo legible. Medir memoria y tiempo de exportación además del renderizado; que PDFium abra un archivo grande rápidamente no demuestra que PDFBox lo exporte igual de rápido. Comprobar después, por separado, la posibilidad de actualizar un original de forma segura.
+Primer trabajo técnico en el proyecto ya creado: lograr que un PDF de prueba entre, reciba una firma y salga como archivo nuevo legible. Medir memoria y tiempo de exportación además del renderizado; que PDFium abra un archivo grande rápidamente no demuestra que PDFBox lo exporte igual de rápido. La política vigente conserva siempre intacto el original.
 
 | Responsabilidad | Propuesta inicial |
 | --- | --- |
@@ -80,7 +80,7 @@ Primer trabajo técnico en el proyecto ya creado: lograr que un PDF de prueba en
 | Estado de edición | ViewModel con documento resoluble, colocaciones de firma y estado de exportación. |
 | Firma guardada | Repositorio local pequeño con eliminación explícita. |
 | Visualización | Controlador del motor PDF con ciclo de vida definido. |
-| Exportación | Coordinador independiente: destino nuevo para adjuntos/solo lectura; actualización del original únicamente después de una prueba segura. |
+| Exportación | Coordinador independiente: destino nuevo en Documents/FirmarPdf para cualquier origen, sin actualización del original. |
 | Historial | Repositorio Room de URI y metadatos del resultado, observable desde Home. |
 | Acceso a documentos | URI y permisos del selector del sistema, sin indexación global en esta primera versión. |
 | Telemetría | Registro de eventos y fallos sin contenido de documentos, aislado del flujo de firma. |

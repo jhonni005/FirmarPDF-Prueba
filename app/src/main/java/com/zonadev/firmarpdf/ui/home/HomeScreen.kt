@@ -30,9 +30,8 @@ import com.zonadev.firmarpdf.data.recentpdf.RecentPdfEntity
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    onRetry: () -> Unit,
     onOpenRecent: (String) -> Unit,
-    onRemoveRecent: (String) -> Unit,
+    loadLocation: suspend (String) -> String?,
     onRetryRecents: () -> Unit,
     loadThumbnail: suspend (RecentPdfEntity) -> Bitmap?,
     onOpenMenu: () -> Unit,
@@ -82,42 +81,7 @@ fun HomeScreen(
             is RecentPdfsState.Content -> {
                 if (recent.results.isEmpty()) item { Text(stringResource(R.string.recent_empty)) }
                 items(recent.results, key = { "recent_${it.uri}" }) { pdf ->
-                    RecentPdfRow(pdf, loadThumbnail, { onOpenRecent(pdf.uri) }, { onRemoveRecent(pdf.uri) })
-                }
-            }
-        }
-        item {
-            Text(stringResource(R.string.signed_documents_title), style = MaterialTheme.typography.titleLarge)
-        }
-        when (val signedPdfs = state.signedPdfs) {
-            SignedPdfsState.Loading -> item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CircularProgressIndicator()
-                    Text(stringResource(R.string.history_loading))
-                }
-            }
-            SignedPdfsState.Error -> item {
-                Column {
-                    Text(stringResource(R.string.history_error))
-                    OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
-                }
-            }
-            is SignedPdfsState.Content -> {
-                if (signedPdfs.results.isEmpty()) {
-                    item { Text(stringResource(R.string.history_empty)) }
-                }
-                items(signedPdfs.results, key = { "signed_${it.id}" }) { result ->
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(result.displayName, style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.signed_at, DateFormat.getDateFormat(context).format(Date(result.signedAt))))
-                        Text(stringResource(when (result.resultKind) {
-                            ResultKind.NEW_DOCUMENT -> R.string.result_new_document
-                            ResultKind.UPDATED_SOURCE -> R.string.result_updated_source
-                        }))
-                    }
+                    RecentPdfRow(pdf, loadThumbnail, loadLocation, { onOpenRecent(pdf.uri) })
                 }
             }
         }

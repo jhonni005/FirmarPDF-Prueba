@@ -19,10 +19,12 @@ import com.zonadev.firmarpdf.data.recentpdf.RecentPdfEntity
 import java.util.Date
 
 @Composable
-internal fun RecentPdfRow(pdf: RecentPdfEntity, load: suspend (RecentPdfEntity) -> Bitmap?, onOpen: () -> Unit, onRemove: () -> Unit) {
+internal fun RecentPdfRow(pdf: RecentPdfEntity, load: suspend (RecentPdfEntity) -> Bitmap?, location: suspend (String) -> String?, onOpen: () -> Unit) {
     val thumbnail by produceState<Bitmap?>(null, pdf) { value = load(pdf) }
     val context = LocalContext.current
+    val place by produceState<String?>(null, pdf.uri) { value = location(pdf.uri) }
     Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+        Column {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(64.dp, 88.dp), contentAlignment = Alignment.Center) {
                 thumbnail?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
@@ -36,9 +38,10 @@ internal fun RecentPdfRow(pdf: RecentPdfEntity, load: suspend (RecentPdfEntity) 
                 } ?: stringResource(R.string.recent_modified_unknown), style = MaterialTheme.typography.bodySmall)
                 if (pdf.unavailable) Text(stringResource(R.string.recent_unavailable), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick = onRemove) {
-                Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.recent_remove))
-            }
+        }
+        Text(place ?: stringResource(R.string.recent_location_unknown),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

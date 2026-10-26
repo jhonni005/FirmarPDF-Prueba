@@ -26,8 +26,7 @@ class RecentPdfRepository(
             } catch (_: SecurityException) {
                 // Algunos proveedores solo conceden lectura temporal.
             } catch (_: IllegalArgumentException) { }
-            val order = maxOf(System.currentTimeMillis(), (dao.lastOpenOrder() ?: 0L) + 1L)
-            dao.upsert(RecentPdfEntity(uri.toString(), metadata.displayName.orEmpty(), metadata.modifiedAt, order))
+            dao.recordOpened(RecentPdfEntity(uri.toString(), metadata.displayName.orEmpty(), metadata.modifiedAt, System.currentTimeMillis()))
         }
     }
 

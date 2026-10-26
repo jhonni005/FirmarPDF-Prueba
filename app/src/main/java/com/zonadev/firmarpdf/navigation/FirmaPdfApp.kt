@@ -41,6 +41,8 @@ import com.zonadev.firmarpdf.ui.pdf.PdfPreviewViewModel
 import com.zonadev.firmarpdf.ui.pdf.PdfSignatureViewModel
 import com.zonadev.firmarpdf.ui.pdf.PdfDateViewModel
 import com.zonadev.firmarpdf.ui.pdf.PdfDrawingViewModel
+import com.zonadev.firmarpdf.ui.pdf.PdfExportViewModel
+import com.zonadev.firmarpdf.app.IncomingPdfViewModel
 import com.zonadev.firmarpdf.ui.home.HomeScreen
 import com.zonadev.firmarpdf.ui.home.HomeViewModel
 import com.zonadev.firmarpdf.ui.signature.CreateSignatureScreen
@@ -60,7 +62,7 @@ private object Routes {
 }
 
 @Composable
-fun FirmaPdfApp(container: AppContainer) {
+fun FirmaPdfApp(container: AppContainer, incoming: IncomingPdfViewModel? = null) {
     val navController = rememberNavController()
     val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory {
         initializer {
@@ -70,7 +72,10 @@ fun FirmaPdfApp(container: AppContainer) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     fun openPreview(uri: Uri) {
-        navController.navigate("preview/${Uri.encode(uri.toString())}") { launchSingleTop = true }
+        val current = navController.currentBackStackEntry
+        if (current?.destination?.route == Routes.PREVIEW && current.arguments?.getString("documentUri") == uri.toString()) return
+        // Argumentos diferentes necesitan su propio ViewModel/borrador; no reutilizar singleTop.
+        navController.navigate("preview/${Uri.encode(uri.toString())}")
     }
     LaunchedEffect(homeViewModel, navController, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -85,6 +90,13 @@ fun FirmaPdfApp(container: AppContainer) {
         current as? Activity
     }
     val route = backStackEntry?.destination?.route
+    val incomingUri = incoming?.pending?.collectAsStateWithLifecycle()?.value
+    LaunchedEffect(incomingUri, route) {
+        val value = incomingUri ?: return@LaunchedEffect
+        if (route == null || route == Routes.SIGNATURE) return@LaunchedEffect
+        if (backStackEntry?.arguments?.getString("documentUri") != value) homeViewModel.openRecent(value)
+        incoming?.consume(value)
+    }
     DisposableEffect(activity, route) {
         if (route != null) activity?.requestedOrientation =
             if (route == Routes.SIGNATURE) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -94,6 +106,11 @@ fun FirmaPdfApp(container: AppContainer) {
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(state.selectionError) {
+        if (state.selectionError != null && route != Routes.HOME) {
+            snackbar.showSnackbar(context.getString(R.string.selection_unreadable))
+        }
+    }
     HomeNavigationDrawer(drawer, route == Routes.HOME, snackbar) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -116,9 +133,8 @@ fun FirmaPdfApp(container: AppContainer) {
                 composable(Routes.HOME) {
                     HomeScreen(
                         state = state,
-                        onRetry = homeViewModel::loadHistory,
                         onOpenRecent = homeViewModel::openRecent,
-                        onRemoveRecent = homeViewModel::removeRecent,
+                        loadLocation = { container.selectedPdfReader.location(context.applicationContext, Uri.parse(it)) },
                         onRetryRecents = homeViewModel::loadRecents,
                         loadThumbnail = container.pdfThumbnailCache::load,
                         onOpenMenu = { scope.launch { drawer.open() } },
@@ -141,13 +157,21 @@ fun FirmaPdfApp(container: AppContainer) {
                     })
                     val dateViewModel: PdfDateViewModel = viewModel(factory = viewModelFactory { initializer { PdfDateViewModel() } })
                     val drawingViewModel: PdfDrawingViewModel = viewModel(factory = viewModelFactory { initializer { PdfDrawingViewModel() } })
+                    val exportViewModel: PdfExportViewModel = viewModel(factory = viewModelFactory {
+                        initializer {
+                            val sourceUri = Uri.parse(checkNotNull(entry.arguments?.getString("documentUri")))
+                            PdfExportViewModel(container.pdfExporter, sourceUri)
+                        }
+                    })
                     PdfPreviewScreen(
                         state = previewState,
                         signatures = signatureViewModel,
                         dates = dateViewModel,
                         drawing = drawingViewModel,
+                        export = exportViewModel,
                         onRetry = previewViewModel::reload,
                         onBack = { navController.popBackStack() },
+                        onGoHome = { navController.popBackStack(Routes.HOME, false) },
                         onCreateSignature = { navController.navigate(Routes.SIGNATURE) { launchSingleTop = true } },
                     )
                 }

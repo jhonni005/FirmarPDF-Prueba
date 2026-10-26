@@ -1,6 +1,6 @@
 # Firma PDF — Arquitectura v0.1
 
-Referencia actualizada al 23/10/2026: se conservan los cambios y las comprobaciones históricas. Las secciones 13–14 describen firmas y colocación visual; 15–18 añaden recientes con Room v2, menú de Inicio, fechas y dibujo por página. Ninguna herramienta visual escribe o exporta el PDF. Los requisitos, estados y verificaciones pendientes se registran en BACKLOG.md. Las pantallas y operaciones objetivo de las secciones siguientes no implican implementación.
+Política vigente de este incremento: Guardar crea siempre un PDF NUEVO en Documents/FirmarPdf para cualquier origen. Se mantienen Room v2 y sus datos; §20 describe exportación, entradas externas y los límites de verificación. Las secciones históricas conservan las decisiones y pruebas de etapas anteriores, sin habilitar modificación del original.
 
 ## 1. Objetivo y límites
 
@@ -41,13 +41,13 @@ La operación `SaveSignedPdf` es una pieza de coordinación justificada: resuelv
 - `SavedSignatureStore`: PNG privados individuales `filesDir/signature/<UUID>.png`; API `save(strokes, aspectRatio): String`, `list(): List<String>`, `load(id): Bitmap?` y `delete(id): Boolean`. El ID es estable y no contiene rutas. El PNG antiguo `filesDir/signature/signature.png` se reconoce como ID `signature`, se lista/carga igual que los nuevos y solo puede borrarse mediante una llamada explícita a `delete("signature")`. No se mueve, sobrescribe ni borra durante la actualización. No se usa Room para PNG ni se altera la base de resultados. La política anterior de reemplazo queda documentada como histórica en §12.
 - `SignedPdfEntity` (Room): `id`, `resultUri`, `displayName`, `signedAt`, `resultKind` (`UPDATED_SOURCE` o `NEW_DOCUMENT`) y, si aporta valor, `sourceKind`. Guardar URI como texto y metadatos, nunca PDF/PNG en BLOB. Índice único o política definida para el mismo URI actualizado varias veces; al actualizar un original, cambiar su fecha en vez de crear duplicados sin fin. Exportar el esquema Room al repositorio y versionar migraciones; no usar migración destructiva cuando ya haya usuarios.
 
-Home observa `Flow<List<SignedPdfEntity>>` ordenado por fecha. Si un archivo externo se movió o borró, al abrirlo se marca como no disponible y se permite quitar su fila. Un resultado nuevo en almacenamiento público no depende de que la app siga instalada.
+Inicio observa recent_pdfs; signed_pdfs se conserva como registro de resultados, sin una segunda sección vacía en Inicio. Si un archivo externo se movió o borró, al abrirlo se marca como no disponible y se permite quitar su fila. Un resultado nuevo en almacenamiento público no depende de que la app siga instalada.
 
 ## 5. Entrada y salida de documentos
 
 | Entrada | Acceso inicial | Salida prevista |
 | --- | --- | --- |
-| `ACTION_OPEN_DOCUMENT` (SAF) | URI seleccionada y permisos otorgados; consultar `FLAG_SUPPORTS_WRITE` y probar capacidades reales | Actualizar original únicamente cuando el procedimiento de reemplazo se haya demostrado seguro para ese proveedor. Si no, producir archivo nuevo. |
+| `ACTION_OPEN_DOCUMENT` (SAF) | URI seleccionada y permisos otorgados; consultar `FLAG_SUPPORTS_WRITE` y probar capacidades reales | Crear siempre un archivo nuevo en Documents/FirmarPdf; nunca actualizar el original. |
 | `ACTION_VIEW` o `ACTION_SEND` desde Gmail/WhatsApp/otra app | URI de `data`, `ClipData` o `EXTRA_STREAM` y lectura temporal | Crear PDF firmado nuevo en `Documents/FirmarPdf/`. |
 | URI sin escritura o proveedor remoto | Lectura concedida por el proveedor | Crear PDF firmado nuevo; no inferir acceso directo a sus rutas privadas. |
 
@@ -55,7 +55,7 @@ Para adjuntos externos, copiar el origen a caché privada **solo si** el motor r
 
 Para una salida nueva, intentar escribir el PDF final en la carpeta **pública** `Documents/FirmarPdf/` con la API de almacenamiento apropiada a la versión de Android y MIME `application/pdf`; reservar nombre sin colisiones. En Android 10+ estudiar la colección de documentos de MediaStore y `RELATIVE_PATH`/`IS_PENDING`, verificando en Android 10 y 15 la ruta visible y que `IS_PENDING` quede en 0. En Android 9 hay que resolver por separado la escritura en la carpeta pública (permiso de escritura de esa versión o selección de destino con SAF); no asumir que la ruta directa funcionará por tener `minSdk 28`. Si PDFBox puede escribir directamente a un destino nuevo e independiente, evitar una copia temporal adicional. En fallo, descartar el destino incompleto y conservar el estado del editor para reintentar.
 
-Actualizar el original es una capacidad **pendiente de demostración**. No usar `saveIncremental`, ni escribir `PDDocument.save()` sobre el origen abierto. Una bandera de escritura o `DocumentFile.canWrite()` no prueba reemplazo atómico ni recuperable. Medir y probar sobre copias de ensayo: fuentes locales/proveedores diferentes, PDFs grandes, poco espacio, cierre de app y fallo durante escritura. La ruta de original se habilita solo si el procedimiento preserva el archivo ante fallos; de lo contrario `SaveSignedPdf` genera un archivo nuevo. El botón de la UI es simplemente «Guardar» y muestra el resultado al terminar, sin diálogo para elegir modo.
+Actualizar originales queda fuera de esta política. No usar saveIncremental ni abrir el origen en escritura. Guardar siempre genera una salida nueva, cierra los flujos y comprueba páginas antes de publicar; un fallo conserva el borrador y nunca borra ni trunca el origen.
 
 Orden de éxito: terminar escritura → cerrar flujos → volver a abrir y comprobar estructura/páginas → publicar resultado → insertar/actualizar fila Room → mostrar éxito. Si el archivo está listo pero Room falla, mostrar el archivo y reintentar registrar la fila; si Room existe y el archivo no, nunca anunciar éxito. La verificación de apertura no sustituye comparar visualmente las páginas en las pruebas.
 
@@ -66,7 +66,7 @@ Compartir usa la URI del resultado con permiso temporal de lectura. Desde Home y
 1. **Home**: acción principal «Firmar un PDF», lista de PDF firmados, acceso discreto a la firma guardada y ajustes/privacidad.
 2. **Editor**: PDFium, paginación/zoom, firma manuscrita, arrastre entre páginas, redimensionar/eliminar y botón Guardar. Reusar la geometría probada de LectorDocumentos tras revisar sus dependencias y separar el control de anuncios/premium.
 3. **Crear firma**: dibujar, deshacer/borrar y guardar cada nueva firma reutilizable. No hay opción «Usar solo esta vez».
-4. **Resultado**: puede ser panel o pantalla breve con Abrir, Compartir y volver a Home. Confirmar solo después de una salida válida; informar «Original actualizado» o ubicación del archivo nuevo.
+4. **Resultado**: puede ser panel o pantalla breve con Abrir, Compartir y volver a Home. Confirmar solo después de una salida nueva válida; informar su ubicación y que el original permanece intacto.
 
 Una firma guardada se puede colocar ilimitadamente; no hay límite de tres PDF ni tres colocaciones. El soporte de texto/fecha es una ampliación de la primera versión pública si la beta de firmas muestra que se necesita, no una dependencia del editor básico.
 
@@ -83,7 +83,7 @@ Detectar antes de editar PDF no admitidos, incluidos los que ya tengan firmas di
 3. Hacer una prueba vertical: SAF → abrir PDFium → colocar una firma → PDFBox crea **archivo nuevo** → volver a abrir con PDFium y un segundo lector. Medir apertura, exportación y memoria con PDF pequeño y grande.
 4. Probar intents reales de Gmail y WhatsApp en Huawei Android 10 y Android 15; gestionar permisos temporales y nombre de salida. Incluir Android 9 para la política de carpeta pública.
 5. Incorporar Room, lista de Home y reabrir el resultado tras reiniciar la app; manejar archivo desaparecido.
-6. Probar por separado el reemplazo seguro del original con PDFBox y SAF. Activarlo solo al superar los escenarios de fallo; el flujo de nueva salida ya funciona independientemente.
+6. Comprobar que el original permanece intacto en todas las entradas y escenarios de fallo; el reemplazo del original queda fuera de este MVP.
 7. Añadir Analytics/Crashlytics y controles de recopilación. Comprobar modo avión, exportación múltiple, páginas giradas, primera/última página, pulsación doble, espacio agotado y compatibilidad de 16 KB.
 
 ## 9. Reglas para el trabajo con IA y cambios posteriores
@@ -287,6 +287,40 @@ Resultado: OK (1 test), 0,164 s de prueba. Se comprobó Room v2 y conservación 
 También se compararon los esquemas exportados: signed_pdfs conserva exactamente sus campos, índice y SQL; 1.json permanece intacto y 2.json añade recent_pdfs (hash v2 d1562d455bc5e6f647f4bc592a30db54). Una comprobación SQL local adicional conservó una fila anterior y verificó que el CREATE de la migración coincide con 2.json; esta comprobación no se presenta como sustituto del test Room, que sí se ejecutó. Se revisaron XML, referencias y diff. Manifest, permisos, dependencias, versiones de bibliotecas y módulo único :app no cambian.
 
 La compilación acredita integración y empaquetado, y la prueba aislada acredita la migración descrita. Los flujos manuales pendientes están separados en HOME-001, MENU-001, DATE-001 y DRAW-001: SAF/cancelación/reapertura/permisos y miniaturas; enlaces y compartir; selección y reloj de fechas; dibujo, controles y Terminar; posición, arrastre entre páginas, zoom y recreación de Activity. Ninguna de estas verificaciones acredita exportación ni un PDF firmado válido.
+
+## 20. Guardar siempre un PDF nuevo: implementación actual
+
+La política vigente reemplaza las propuestas históricas de actualizar el original, también para SAF con escritura disponible. Guardar crea un PDF NUEVO en `Documents/FirmarPdf/`. El origen solo se abre para lectura con ContentResolver; nunca se trunca, elimina ni reemplaza. No se usa saveIncremental. Se conservan las versiones, un módulo :app, Room v2, sus entidades, esquema y datos. Compartir el resultado sigue pendiente.
+
+### Exportador y destino público
+
+`PdfExportDraft` captura únicamente firmas colocadas, imágenes de fecha ya fijadas y trazos terminados, sin la firma seleccionada pendiente ni el trazo activo. `PdfExporter` serializa exportaciones mediante Mutex y trabaja en IO. PDFBoxResourceLoader ya se inicializa en FirmaPdfApplication y se reutiliza. La lectura inicial es un stream; no se copia anticipadamente a un archivo de entrada. PDFBox usa MemoryUsageSetting mixto con 32 MiB y su almacenamiento temporal interno en cacheDir; esto no equivale a un límite total de memoria. No se ha necesitado un fallback temporal propio para proveedores; su compatibilidad queda pendiente de probar.
+
+Se consultó puntualmente la geometría y appendSignatures del exportador local de LectorDocumentos, sin trasladar su visor, monetización ni escritura sobre el origen. `PdfExportPage` convierte coordenadas normalizadas del CropBox visual al espacio PDF sin girar, incluyendo offsets y rotaciones 0/90/180/270. Cada página conserva sus cajas y rotación; no se rasteriza. Las matrices de imagen respetan las dimensiones de las colocaciones existentes. Los trazos mantienen puntos, color, alfa y grosor relativo al ancho visual de su página; se usan extremos/uniones redondos y un punto aislado se pinta como círculo. Se recorta al CropBox. El orden base es dibujo, firmas y fechas; la elevación temporal de una colocación seleccionada en el visor no altera el PDF. Las fechas se exportan desde la imagen capturada, sin consultar otra vez el reloj. Si falta una imagen se falla sin omitir silenciosamente una anotación.
+
+Antes de crear salida se rechazan PDFs cifrados/no modificables, con diccionarios de firma digital o certificación DocMDP, y documentos cuyo número de páginas difiera del abierto. No se ofrecen capacidades de firma digital. Los errores del proveedor no se registran con su excepción ni se envían a Firebase.
+
+`PublicPdfDestination` solo administra salidas creadas por él. API 29+ usa MediaStore.Files, MIME application/pdf, RELATIVE_PATH Documents/FirmarPdf/ e IS_PENDING=1. El nombre documento_signed.pdf recibe sufijos ante colisiones y MediaProvider reserva un archivo distinto. API 28 solicita el permiso WRITE_EXTERNAL_STORAGE ya declarado únicamente al pulsar Guardar; escribe un temporal oculto de salida en la carpeta pública y publica por renombrado a una reserva vacía creada por la app, sin sustituir resultados anteriores. Después intenta indexarlo con MediaScanner (espera limitada a 5 s); si no devuelve URI se conserva el file URI propio para lectura interna. No se añade FileProvider ni se implementa Compartir.
+
+El save normal escribe solo en el destino nuevo. Tras cerrar salida/documento, se exige tamaño escrito mayor que cero y se reabre el resultado con PDFBox para comprobar igual número de páginas. Solo entonces se publica quitando IS_PENDING o renombrando. Un fallo/cancelación anterior elimina únicamente la salida pendiente. El cierre de streams al cancelar ayuda a desbloquear operaciones del proveedor; la respuesta de proveedores que bloqueen su propia apertura sigue siendo una limitación externa pendiente de probar. La publicación y el registro se completan sin cancelar entre ambos; un archivo ya publicado nunca se elimina por fallo Room.
+
+`PdfExportHistory` registra signed_pdfs con NEW_DOCUMENT y recent_pdfs con el MISMO URI en una transacción. Si falla esta parte se informa que el PDF se guardó pero no se registró en Inicio. No se cambian tablas ni se añade migración. Las miniaturas siguen generándose con el URI y modificación reales del nuevo archivo; no se reutiliza la del original.
+
+### Visor, Inicio y entradas externas
+
+`PdfExportViewModel` conserva progreso, resultado y una instantánea de lo guardado. Guardar requiere alguna anotación terminada, sin un trazo activo ni otra operación de guardado; muestra etapas y cancelación. El error conserva los borradores para reintentar. El éxito indica claramente la creación de otro archivo y ofrece ir a Inicio. Atrás del sistema confirma el descarte si hay cambios sin guardar. Se retira solo el porcentaje textual de zoom; los gestos existentes se mantienen. Los borradores sobreviven a recreación normal mediante ViewModel, sin prometer recuperación tras muerte del proceso.
+
+RecentPdfDao.recordOpened inserta URI nuevos con un orden monotónico y, ante un URI existente, actualiza solo nombre, modificación real y disponibilidad. Reabrir o colocar anotaciones no mueve la fila. El resultado recién creado queda primero sin mover el original. Inicio elimina papelera y sección Documentos firmados; signed_pdfs se conserva para registro y futura etiqueta, todavía sin etiqueta visible. La ubicación ocupa el ancho de la tarjeta hasta dos líneas: ruta relativa real de MediaStore, carpeta propia para resultados legados o etiqueta del proveedor/Ubicación no disponible. No se deducen rutas absolutas a partir de content URI. La fecha/hora sigue siendo modificación real, no apertura. Drawer, URL legales pendientes, miniaturas y FAB se conservan.
+
+MainActivity procesa exclusivamente ACTION_VIEW/ACTION_SEND application/pdf desde data, EXTRA_STREAM o ClipData, tanto en onCreate como onNewIntent. Conserva el Intent y sus concesiones temporales; no presupone permisos persistentes de Gmail/WhatsApp. IncomingPdfViewModel mantiene la entrada pendiente pequeña durante recreación. Navegación consume la entrada una vez y evita abrir otra instancia si el mismo URI ya está visible; documentos diferentes reciben sus propios ViewModel/borradores. Una entrada recibida mientras se crea una firma se atiende al regresar al visor. Si el acceso falla, se muestra el error sin descartar los borradores existentes.
+
+### Mediciones y verificación de este incremento
+
+Solo debug emite `PdfExportTiming` con elapsedRealtime: sourceMs, loadMs, annotateMs, saveMs (solo document.save), writeStageMs (reserva/escritura/cierre), verifyPublishMs, historyMs y totalMs, tamaños disponibles (-1 desconocido), access=stream y éxito. No incluye nombres, rutas, URI, excepciones, contenido, imágenes ni puntos. No se envía a Firebase. No se han medido todavía PDF reales pequeños/grandes y no se afirma velocidad ni un máximo seguro de memoria.
+
+Se ejecutó una sola vez `.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest --tests com.zonadev.firmarpdf.data.pdf.PdfExportGeometryTest --console=plain`: BUILD SUCCESSFUL en 1 min 3 s, 45 tareas (22 ejecutadas/23 al día). APK generado en app/build/outputs/apk/debug/app-debug.apk. El XML de testDebugUnitTest confirma cuatro pruebas JVM superadas, cero omitidas/fallos/errores (0,031 s): rotaciones con offsets de CropBox, orientación/matriz de imagen, normalización de rotación/ancho visual y rechazo de coordenadas no finitas. Estas pruebas validan la conversión matemática, no el PDF exportado/renderizado. Permanecen dos avisos por los métodos RGB enteros obsoletos de PDFBox y el aviso previo del destino futuro de anotación Kotlin; no se cambiaron flags ni versiones para ocultarlos.
+
+También pasaron XML, referencias de recursos y diff; el esquema Room v2 conserva el hash d1562d455bc5e6f647f4bc592a30db54. Una comprobación SQL local usó el CREATE exportado y las consultas reales del DAO para verificar que reabrir A tras B conserva B/A y que un resultado nuevo queda primero sin mover A. No es una prueba Room ni de interfaz. No se instaló la app, no se usó el Huawei ni se ejecutó la batería instrumentada. Pendiente comprobar SAF local, PDF grande, Gmail, WhatsApp, firmas en páginas rotadas/recortadas y mixtas, fecha fijada, dibujo terminado, cancelación, colisiones, permisos Android 9, reapertura/miniatura del resultado, fallos de Room/proveedor/espacio y hash del original intacto. Exportación implementada no equivale a flujo verificado; FIR-001 sigue pendiente de validación real.
 
 ## Fuentes técnicas
 
