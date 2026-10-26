@@ -39,10 +39,19 @@ import com.zonadev.firmarpdf.app.AppContainer
 import com.zonadev.firmarpdf.ui.pdf.PdfPreviewScreen
 import com.zonadev.firmarpdf.ui.pdf.PdfPreviewViewModel
 import com.zonadev.firmarpdf.ui.pdf.PdfSignatureViewModel
+import com.zonadev.firmarpdf.ui.pdf.PdfDateViewModel
+import com.zonadev.firmarpdf.ui.pdf.PdfDrawingViewModel
 import com.zonadev.firmarpdf.ui.home.HomeScreen
 import com.zonadev.firmarpdf.ui.home.HomeViewModel
 import com.zonadev.firmarpdf.ui.signature.CreateSignatureScreen
 import com.zonadev.firmarpdf.ui.signature.CreateSignatureViewModel
+import com.zonadev.firmarpdf.ui.home.HomeNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 private object Routes {
     const val HOME = "home"
@@ -55,7 +64,7 @@ fun FirmaPdfApp(container: AppContainer) {
     val navController = rememberNavController()
     val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory {
         initializer {
-            HomeViewModel(container.signedPdfRepository, container.selectedPdfReader, createSavedStateHandle())
+            HomeViewModel(container.signedPdfRepository, container.selectedPdfReader, createSavedStateHandle(), container.recentPdfRepository)
         }
     })
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -82,57 +91,72 @@ fun FirmaPdfApp(container: AppContainer) {
         onDispose { }
     }
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument(), homeViewModel::onPdfSelected)
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        floatingActionButton = {
-            if (backStackEntry?.destination?.route == Routes.HOME) {
-                ExtendedFloatingActionButton(onClick = {
-                    try {
-                        pdfPicker.launch(arrayOf("application/pdf"))
-                    } catch (_: ActivityNotFoundException) {
-                        homeViewModel.onPickerUnavailable()
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    HomeNavigationDrawer(drawer, route == Routes.HOME, snackbar) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbar) },
+            floatingActionButton = {
+                if (backStackEntry?.destination?.route == Routes.HOME) {
+                    ExtendedFloatingActionButton(onClick = {
+                        try {
+                            pdfPicker.launch(arrayOf("application/pdf"))
+                        } catch (_: ActivityNotFoundException) {
+                            homeViewModel.onPickerUnavailable()
+                        }
+                    }) {
+                        Text(stringResource(R.string.sign_pdf_title))
                     }
-                }) {
-                    Text(stringResource(R.string.sign_pdf_title))
                 }
-            }
-        },
-    ) { innerPadding ->
-        NavHost(navController, startDestination = Routes.HOME, modifier = Modifier.padding(innerPadding)) {
-            composable(Routes.HOME) {
-                HomeScreen(
-                    state = state,
-                    onRetry = homeViewModel::loadHistory,
-                    onOpenSelectedPdf = { state.selectedPdf?.let { openPreview(it.uri) } },
-                )
-            }
-            composable(Routes.PREVIEW, arguments = listOf(navArgument("documentUri") { type = NavType.StringType })) { entry ->
-                val previewViewModel: PdfPreviewViewModel = viewModel(factory = viewModelFactory {
-                    initializer {
-                        PdfPreviewViewModel(
-                            container.contentResolver,
-                            { container.pdfiumCore },
-                            Uri.parse(checkNotNull(entry.arguments?.getString("documentUri"))),
-                        )
-                    }
-                })
-                val previewState by previewViewModel.uiState.collectAsStateWithLifecycle()
-                val signatureViewModel: PdfSignatureViewModel = viewModel(factory = viewModelFactory {
-                    initializer { PdfSignatureViewModel(container.savedSignatureStore) }
-                })
-                PdfPreviewScreen(
-                    state = previewState,
-                    signatures = signatureViewModel,
-                    onRetry = previewViewModel::reload,
-                    onBack = { navController.popBackStack() },
-                    onCreateSignature = { navController.navigate(Routes.SIGNATURE) { launchSingleTop = true } },
-                )
-            }
-            composable(Routes.SIGNATURE) {
-                val signatureModel: CreateSignatureViewModel = viewModel(factory = viewModelFactory {
-                    initializer { CreateSignatureViewModel(container.savedSignatureStore) }
-                })
-                CreateSignatureScreen(model = signatureModel, onBack = { navController.popBackStack() })
+            },
+        ) { innerPadding ->
+            NavHost(navController, startDestination = Routes.HOME, modifier = Modifier.padding(innerPadding)) {
+                composable(Routes.HOME) {
+                    HomeScreen(
+                        state = state,
+                        onRetry = homeViewModel::loadHistory,
+                        onOpenRecent = homeViewModel::openRecent,
+                        onRemoveRecent = homeViewModel::removeRecent,
+                        onRetryRecents = homeViewModel::loadRecents,
+                        loadThumbnail = container.pdfThumbnailCache::load,
+                        onOpenMenu = { scope.launch { drawer.open() } },
+                    )
+                }
+                composable(Routes.PREVIEW, arguments = listOf(navArgument("documentUri") { type = NavType.StringType })) { entry ->
+                    val previewViewModel: PdfPreviewViewModel = viewModel(factory = viewModelFactory {
+                        initializer {
+                            PdfPreviewViewModel(
+                                container.contentResolver,
+                                { container.pdfiumCore },
+                                Uri.parse(checkNotNull(entry.arguments?.getString("documentUri"))),
+                                container.recentPdfRepository,
+                            )
+                        }
+                    })
+                    val previewState by previewViewModel.uiState.collectAsStateWithLifecycle()
+                    val signatureViewModel: PdfSignatureViewModel = viewModel(factory = viewModelFactory {
+                        initializer { PdfSignatureViewModel(container.savedSignatureStore) }
+                    })
+                    val dateViewModel: PdfDateViewModel = viewModel(factory = viewModelFactory { initializer { PdfDateViewModel() } })
+                    val drawingViewModel: PdfDrawingViewModel = viewModel(factory = viewModelFactory { initializer { PdfDrawingViewModel() } })
+                    PdfPreviewScreen(
+                        state = previewState,
+                        signatures = signatureViewModel,
+                        dates = dateViewModel,
+                        drawing = drawingViewModel,
+                        onRetry = previewViewModel::reload,
+                        onBack = { navController.popBackStack() },
+                        onCreateSignature = { navController.navigate(Routes.SIGNATURE) { launchSingleTop = true } },
+                    )
+                }
+                composable(Routes.SIGNATURE) {
+                    val signatureModel: CreateSignatureViewModel = viewModel(factory = viewModelFactory {
+                        initializer { CreateSignatureViewModel(container.savedSignatureStore) }
+                    })
+                    CreateSignatureScreen(model = signatureModel, onBack = { navController.popBackStack() })
+                }
             }
         }
     }

@@ -3,12 +3,15 @@ package com.zonadev.firmarpdf.ui.home
 import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -21,12 +24,18 @@ import androidx.compose.ui.unit.dp
 import com.zonadev.firmarpdf.R
 import com.zonadev.firmarpdf.data.signedpdf.ResultKind
 import java.util.Date
+import android.graphics.Bitmap
+import com.zonadev.firmarpdf.data.recentpdf.RecentPdfEntity
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
     onRetry: () -> Unit,
-    onOpenSelectedPdf: () -> Unit,
+    onOpenRecent: (String) -> Unit,
+    onRemoveRecent: (String) -> Unit,
+    onRetryRecents: () -> Unit,
+    loadThumbnail: suspend (RecentPdfEntity) -> Bitmap?,
+    onOpenMenu: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -36,7 +45,12 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium) }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onOpenMenu) { Icon(painterResource(R.drawable.ic_menu), stringResource(R.string.drawer_open)) }
+                Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium)
+            }
+        }
         if (state.checkingSelection) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -56,16 +70,19 @@ fun HomeScreen(
                 )
             }
         }
-        state.selectedPdf?.let { pdf ->
-            item {
-                Text(stringResource(R.string.selected_pdf_title), style = MaterialTheme.typography.titleLarge)
+        item { Text(stringResource(R.string.recent_title), style = MaterialTheme.typography.titleLarge) }
+        when (val recent = state.recentPdfs) {
+            RecentPdfsState.Loading -> item { CircularProgressIndicator() }
+            RecentPdfsState.Error -> item {
+                Column {
+                    Text(stringResource(R.string.recent_error))
+                    OutlinedButton(onClick = onRetryRecents) { Text(stringResource(R.string.retry)) }
+                }
             }
-            item(key = "selected_pdf") {
-                Card(onClick = onOpenSelectedPdf, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(pdf.displayName ?: stringResource(R.string.pdf_without_name), style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.pdf_pending_signature))
-                    }
+            is RecentPdfsState.Content -> {
+                if (recent.results.isEmpty()) item { Text(stringResource(R.string.recent_empty)) }
+                items(recent.results, key = { "recent_${it.uri}" }) { pdf ->
+                    RecentPdfRow(pdf, loadThumbnail, { onOpenRecent(pdf.uri) }, { onRemoveRecent(pdf.uri) })
                 }
             }
         }

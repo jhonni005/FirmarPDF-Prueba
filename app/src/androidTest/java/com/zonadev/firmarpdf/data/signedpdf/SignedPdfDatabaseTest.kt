@@ -16,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.UUID
+import com.zonadev.firmarpdf.data.recentpdf.RecentPdfEntity
 
 @RunWith(AndroidJUnit4::class)
 class SignedPdfDatabaseTest {
@@ -69,7 +70,7 @@ class SignedPdfDatabaseTest {
     }
 
     @Test
-    fun renamedDatabaseOpensTheOriginalVersionOneWithoutLosingRows() = runBlocking {
+    fun migrationOneToTwoKeepsSignedRowAndSeparatesRecentPdfs() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val databaseName = "signed_pdf_rename_test_${UUID.randomUUID()}.db"
         val file = context.getDatabasePath(databaseName)
@@ -84,11 +85,22 @@ class SignedPdfDatabaseTest {
                 old.execSQL("INSERT INTO signed_pdfs VALUES (7, 'content://test.documents/existing', 'existing.pdf', 100, 'NEW_DOCUMENT')")
                 old.version = 1
             }
-            val reopened = Room.databaseBuilder(context, SignedPdfDatabase::class.java, databaseName).build()
+            val reopened = Room.databaseBuilder(context, SignedPdfDatabase::class.java, databaseName)
+                .addMigrations(SignedPdfDatabase.MIGRATION_1_2).build()
             try {
                 val existing = withTimeout(5_000) { reopened.signedPdfDao().observeResults().first() }.single()
                 assertEquals(7L, existing.id)
                 assertEquals("existing.pdf", existing.displayName)
+                assertEquals("content://test.documents/existing", existing.resultUri)
+                assertEquals(100L, existing.signedAt)
+                assertEquals(ResultKind.NEW_DOCUMENT, existing.resultKind)
+                assertEquals(2, reopened.openHelper.readableDatabase.version)
+                assertTrue(reopened.recentPdfDao().observeRecents().first().isEmpty())
+                val recent = RecentPdfEntity("content://test.documents/recent", "recent.pdf", 55L, 200L)
+                reopened.recentPdfDao().upsert(recent)
+                reopened.recentPdfDao().upsert(recent.copy(lastOpenedAt = 300L))
+                assertEquals(300L, reopened.recentPdfDao().observeRecents().first().single().lastOpenedAt)
+                assertEquals(existing, reopened.signedPdfDao().observeResults().first().single())
             } finally {
                 reopened.close()
             }

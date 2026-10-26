@@ -160,6 +160,8 @@ class PdfSignatureViewModel(private val store: SavedSignatureStore) : ViewModel(
         if (state.value.placements.any { it.id == id }) state.value = state.value.copy(selectedId = id)
     }
 
+    fun clearSelection() { state.value = state.value.copy(selectedId = null) }
+
     fun removePlacement(id: String) {
         val current = state.value
         val placements = current.placements.filterNot { it.id == id }

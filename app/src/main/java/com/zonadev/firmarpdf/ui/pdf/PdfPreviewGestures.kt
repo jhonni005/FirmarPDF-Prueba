@@ -85,16 +85,36 @@ internal class PdfPreviewZoomState(scale: Float = 1f, x: Float = 0f, y: Float = 
 
 @Composable
 internal fun Modifier.pdfPreviewGestures(
-    zoom: PdfPreviewZoomState, list: LazyListState, signatures: PdfSignatureGestureCallbacks,
+    zoom: PdfPreviewZoomState, list: LazyListState, signatures: PdfPlacementGestureCallbacks, drawing: PdfDrawingGestureCallbacks,
 ): Modifier {
     val callbacks = rememberUpdatedState(signatures)
+    val drawingCallbacks = rememberUpdatedState(drawing)
     return pointerInput(zoom) {
         detectTapGestures(onDoubleTap = {
-            if (callbacks.value.viewportEnabled && callbacks.value.hitTest(it) == null) zoom.doubleTap(it, size)
+            if (!drawingCallbacks.value.enabled && callbacks.value.viewportEnabled && callbacks.value.hitTest(it) == null) zoom.doubleTap(it, size)
         })
     }.pointerInput(zoom, list) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (drawingCallbacks.value.enabled) {
+                down.consume()
+                var completed = false
+                var cancelled = false
+                drawingCallbacks.value.begin(down.position)
+                try {
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || event.changes.count { it.pressed } > 1) cancelled = true
+                        if (!cancelled && change != null) {
+                            drawingCallbacks.value.append(change.position)
+                            if (!change.pressed) completed = true
+                        }
+                        event.changes.forEach { it.consume() }
+                    } while (event.changes.any { it.pressed })
+                } finally { drawingCallbacks.value.finish(cancelled || !completed) }
+                return@awaitEachGesture
+            }
             if (!callbacks.value.viewportEnabled) {
                 down.consume()
                 do {
@@ -128,7 +148,7 @@ internal fun Modifier.pdfPreviewGestures(
                         if (change != null && !cancelled) {
                             val delta = change.position - change.previousPosition
                             total += delta
-                            if (!dragging && total.getDistance() > viewConfiguration.touchSlop && hit.control != SignatureControl.REMOVE) {
+                            if (!dragging && total.getDistance() > viewConfiguration.touchSlop && hit.control != PlacementControl.REMOVE) {
                                 dragging = true
                                 callbacks.value.onStart(hit)
                                 callbacks.value.onMove(total, change.position)

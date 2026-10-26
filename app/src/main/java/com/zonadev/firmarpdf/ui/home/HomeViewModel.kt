@@ -8,6 +8,8 @@ import com.zonadev.firmarpdf.data.signedpdf.SignedPdfRepository
 import com.zonadev.firmarpdf.data.signedpdf.SignedPdfEntity
 import com.zonadev.firmarpdf.data.pdf.SelectedPdf
 import com.zonadev.firmarpdf.data.pdf.SelectedPdfReader
+import com.zonadev.firmarpdf.data.recentpdf.RecentPdfEntity
+import com.zonadev.firmarpdf.data.recentpdf.RecentPdfRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -25,27 +27,37 @@ sealed interface SignedPdfsState {
 
 enum class PdfSelectionError { UNREADABLE, PICKER_UNAVAILABLE }
 
+sealed interface RecentPdfsState {
+    data object Loading : RecentPdfsState
+    data object Error : RecentPdfsState
+    data class Content(val results: List<RecentPdfEntity>) : RecentPdfsState
+}
+
 data class HomeUiState(
     val signedPdfs: SignedPdfsState = SignedPdfsState.Loading,
     val selectedPdf: SelectedPdf? = null,
     val checkingSelection: Boolean = false,
     val selectionError: PdfSelectionError? = null,
+    val recentPdfs: RecentPdfsState = RecentPdfsState.Loading,
 )
 
 class HomeViewModel(
     private val repository: SignedPdfRepository,
     private val selectedPdfReader: SelectedPdfReader,
     private val savedState: SavedStateHandle,
+    private val recents: RecentPdfRepository? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(HomeUiState())
     val uiState = mutableState.asStateFlow()
     private var observation: Job? = null
     private var selection: Job? = null
+    private var recentObservation: Job? = null
     private val previews = Channel<Uri>(Channel.BUFFERED)
     val previewRequests = previews.receiveAsFlow()
 
     init {
         loadHistory()
+        loadRecents()
         savedState.get<String>(SELECTED_URI)?.let { selectPdf(Uri.parse(it), openPreview = false) }
     }
 
@@ -72,6 +84,33 @@ class HomeViewModel(
         selectPdf(uri, openPreview = true)
     }
 
+    fun loadRecents() {
+        val store = recents ?: return
+        recentObservation?.cancel()
+        recentObservation = viewModelScope.launch {
+            mutableState.update { it.copy(recentPdfs = RecentPdfsState.Loading) }
+            try {
+                store.recents.collect { rows -> mutableState.update { it.copy(recentPdfs = RecentPdfsState.Content(rows)) } }
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (_: Exception) { mutableState.update { it.copy(recentPdfs = RecentPdfsState.Error) } }
+        }
+    }
+
+    fun openRecent(uri: String) = selectPdf(Uri.parse(uri), openPreview = true)
+
+    fun removeRecent(uri: String) {
+        viewModelScope.launch {
+            try {
+                recents?.remove(uri)
+                if (mutableState.value.selectedPdf?.uri.toString() == uri) {
+                    savedState.remove<String>(SELECTED_URI)
+                    mutableState.update { it.copy(selectedPdf = null) }
+                }
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (_: Exception) { mutableState.update { it.copy(recentPdfs = RecentPdfsState.Error) } }
+        }
+    }
+
     private fun selectPdf(uri: Uri, openPreview: Boolean) {
         selection?.cancel()
         selection = viewModelScope.launch {
@@ -86,6 +125,7 @@ class HomeViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
+                try { recents?.markUnavailable(uri) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
                 mutableState.update {
                     it.copy(checkingSelection = false, selectionError = PdfSelectionError.UNREADABLE)
                 }

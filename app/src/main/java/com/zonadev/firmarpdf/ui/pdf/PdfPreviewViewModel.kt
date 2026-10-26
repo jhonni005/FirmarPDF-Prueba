@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.zonadev.firmarpdf.data.pdf.PdfPreviewError
 import com.zonadev.firmarpdf.data.pdf.PdfPreviewException
 import com.zonadev.firmarpdf.data.pdf.PdfPreviewSession
+import com.zonadev.firmarpdf.data.recentpdf.RecentPdfRepository
 import io.legere.pdfiumandroid.PdfiumCore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +23,7 @@ import kotlinx.coroutines.withContext
 
 sealed interface PdfPreviewState {
     data object Loading : PdfPreviewState
-    data class Ready(val session: PdfPreviewSession) : PdfPreviewState
+    data class Ready(val session: PdfPreviewSession, val recentSaveFailed: Boolean = false) : PdfPreviewState
     data class Error(val reason: PdfPreviewError) : PdfPreviewState
 }
 
@@ -30,6 +31,7 @@ class PdfPreviewViewModel(
     private val resolver: ContentResolver,
     private val core: () -> PdfiumCore,
     private val uri: Uri,
+    private val recents: RecentPdfRepository? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<PdfPreviewState>(PdfPreviewState.Loading)
     val uiState = mutableState.asStateFlow()
@@ -52,16 +54,22 @@ class PdfPreviewViewModel(
                 // Guardar la referencia antes de cualquier salto de dispatcher: evita fugas al cancelar.
                 opened = PdfPreviewSession.open(resolver, core, uri)
                 ensureActive()
+                val recentSaveFailed = try {
+                    recents?.recordOpened(uri)
+                    false
+                } catch (cancelled: CancellationException) { throw cancelled
+                } catch (_: Exception) { true }
                 withContext(Dispatchers.Main.immediate) {
                     if (generation == expected) {
                         current = opened
-                        mutableState.value = PdfPreviewState.Ready(checkNotNull(opened))
+                        mutableState.value = PdfPreviewState.Ready(checkNotNull(opened), recentSaveFailed)
                         opened = null
                     }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: PdfPreviewException) {
+                try { recents?.markUnavailable(uri) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
                 withContext(Dispatchers.Main.immediate) {
                     if (generation == expected) mutableState.value = PdfPreviewState.Error(failure.reason)
                 }

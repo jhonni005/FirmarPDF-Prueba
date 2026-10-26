@@ -82,4 +82,37 @@
     <string name="signature_shrink">Reducir tamaño</string>
     <string name="signature_visual_draft">Borrador visual; el PDF todavía no se ha modificado.</string>
     <string name="dismiss_error">Cerrar mensaje</string>
+    <string name="recent_title">PDF recientes</string>
+    <string name="recent_empty">Los PDF que abras aparecerán aquí.</string>
+    <string name="recent_error">No se pudieron cargar los PDF recientes.</string>
+    <string name="recent_modified">Modificado: %1$s</string>
+    <string name="recent_modified_unknown">Fecha de modificación no disponible</string>
+    <string name="recent_unavailable">No se puede acceder al documento. Puede haberse movido, eliminado o perdido el permiso de lectura. Toca para reintentar o quita la referencia.</string>
+    <string name="recent_remove">Quitar referencia de Recientes</string>
+    <string name="recent_record_error">El PDF se abrió, pero no se pudo registrar en Recientes.</string>
+    <string name="drawer_open">Abrir menú</string>
+    <string name="drawer_privacy">Política de privacidad</string>
+    <string name="drawer_terms">Términos y condiciones</string>
+    <string name="drawer_rate">Califícanos</string>
+    <string name="drawer_share">Compartir app</string>
+    <string name="app_version">Versión %1$s</string>
+    <string name="version_unknown">no disponible</string>
+    <string name="privacy_policy_url" translatable="false"></string>
+    <string name="terms_conditions_url" translatable="false"></string>
+    <string name="legal_link_pending">Enlace pendiente</string>
+    <string name="external_link_error">No hay una aplicación disponible para abrir este enlace.</string>
+    <string name="rating_publication_notice">La ficha y las valoraciones estarán disponibles cuando la app esté publicada en Play Store.</string>
+    <string name="rating_unavailable">No se pudo abrir la ficha de Play Store. La app puede no estar publicada o no haber una aplicación compatible.</string>
+    <string name="share_app_error">No hay una aplicación disponible para compartir el enlace.</string>
+    <string name="date_action">Fecha</string>
+    <string name="date_format_title">Formato de fecha</string>
+    <string name="date_placed">Fecha %1$s en la página %2$d</string>
+    <string name="date_create_error">No se pudo colocar la fecha. Vuelve a intentarlo.</string>
+    <string name="date_move">Mover fecha</string>
+    <string name="date_resize">Cambiar tamaño de la fecha</string>
+    <string name="date_remove">Quitar fecha del borrador</string>
+    <string name="drawing_action">Dibujar</string>
+    <string name="drawing_finish">Terminar</string>
+    <string name="drawing_clear">Borrar dibujos</string>
+    <string name="drawing_hint">Dibuja sobre una página. Pulsa Terminar para volver a desplazar el PDF.</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.zonadev.firmarpdf.ui.pdf
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,84 +25,92 @@ import com.zonadev.firmarpdf.data.signature.PdfSignatureBounds
 import com.zonadev.firmarpdf.data.signature.PdfSignaturePlacement
 import kotlin.math.roundToInt
 
-internal enum class SignatureControl { BODY, MOVE, RESIZE, REMOVE }
-internal data class SignatureVisual(val placement: PdfSignaturePlacement, val bounds: PdfSignatureBounds)
-internal data class SignatureHit(val visual: SignatureVisual, val control: SignatureControl, val pointer: Offset)
-internal data class SignatureDrag(val hit: SignatureHit, val bounds: PdfSignatureBounds, val pointer: Offset)
+internal enum class PlacementControl { BODY, MOVE, RESIZE, REMOVE }
+internal data class PlacementVisual(val placement: PdfSignaturePlacement, val bounds: PdfSignatureBounds, val dateText: String? = null)
+internal data class PlacementHit(val visual: PlacementVisual, val control: PlacementControl, val pointer: Offset)
+internal data class PlacementDrag(val hit: PlacementHit, val bounds: PdfSignatureBounds, val pointer: Offset)
+
+internal class PdfPlacementActions(
+    val select: (String) -> Unit,
+    val move: (String, Float, Float) -> Unit,
+    val resize: (String, Float) -> Unit,
+    val remove: (String) -> Unit,
+)
 
 /** Todas las coordenadas del gesto son del viewport; el detector vive fuera de las páginas perezosas. */
-internal class PdfSignatureGestureCallbacks(
+internal class PdfPlacementGestureCallbacks(
     val viewportEnabled: Boolean,
-    val hitTest: (Offset) -> SignatureHit?,
-    val onPress: (SignatureHit) -> Unit,
-    val onStart: (SignatureHit) -> Unit,
+    val hitTest: (Offset) -> PlacementHit?,
+    val onPress: (PlacementHit) -> Unit,
+    val onStart: (PlacementHit) -> Unit,
     val onMove: (Offset, Offset) -> Unit,
     val onEnd: () -> Unit,
     val onCancel: () -> Unit,
-    val onTap: (SignatureHit) -> Unit,
+    val onTap: (PlacementHit) -> Unit,
 )
 
-internal fun signatureHitTest(
-    visuals: List<SignatureVisual>, selectedId: String?, point: Offset, handleSize: Float,
-): SignatureHit? {
+internal fun placementHitTest(
+    visuals: List<PlacementVisual>, selectedId: String?, point: Offset, handleSize: Float,
+): PlacementHit? {
     val selected = visuals.firstOrNull { it.placement.id == selectedId }
     if (selected != null) {
         val b = selected.bounds
         for ((control, corner) in listOf(
-            SignatureControl.REMOVE to Offset(b.right, b.top),
-            SignatureControl.RESIZE to Offset(b.right, b.bottom),
-            SignatureControl.MOVE to Offset(b.left, b.top),
+            PlacementControl.REMOVE to Offset(b.right, b.top),
+            PlacementControl.RESIZE to Offset(b.right, b.bottom),
+            PlacementControl.MOVE to Offset(b.left, b.top),
         )) {
             if (PdfSignatureBounds(corner.x - handleSize / 2, corner.y - handleSize / 2, handleSize, handleSize).contains(point.x, point.y)) {
-                return SignatureHit(selected, control, point)
+                return PlacementHit(selected, control, point)
             }
         }
     }
     return visuals.asReversed().firstOrNull { it.bounds.contains(point.x, point.y) }
-        ?.let { SignatureHit(it, SignatureControl.BODY, point) }
+        ?.let { PlacementHit(it, PlacementControl.BODY, point) }
 }
 
 /** Adapta borde, controles y vista de arrastre del lector; medidas de pantalla independientes del zoom. */
 @Composable
-internal fun PdfSignaturePlacementOverlay(
-    visuals: List<SignatureVisual>, state: PdfSignatureUiState, model: PdfSignatureViewModel,
-    drag: SignatureDrag?, modifier: Modifier = Modifier,
+internal fun PdfPlacementOverlay(
+    visuals: List<PlacementVisual>, images: Map<String, Bitmap>, selectedId: String?, actions: PdfPlacementActions,
+    drag: PlacementDrag?, modifier: Modifier = Modifier,
 ) {
-    val moving = drag?.takeUnless { it.hit.control == SignatureControl.RESIZE }
+    val moving = drag?.takeUnless { it.hit.control == PlacementControl.RESIZE }
     Box(modifier) {
         visuals.forEach { visual ->
             if (visual.placement.id != moving?.hit?.visual?.placement?.id) {
-                SignatureVisualContent(visual, state, model, interactive = true)
+                PlacementVisualContent(visual, images, selectedId, actions, interactive = true)
             }
         }
-        moving?.let { SignatureVisualContent(it.hit.visual.copy(bounds = it.bounds), state, model, interactive = false) }
+        moving?.let { PlacementVisualContent(it.hit.visual.copy(bounds = it.bounds), images, selectedId, actions, interactive = false) }
     }
 }
 
 @Composable
-private fun SignatureVisualContent(
-    visual: SignatureVisual, state: PdfSignatureUiState, model: PdfSignatureViewModel, interactive: Boolean,
+private fun PlacementVisualContent(
+    visual: PlacementVisual, images: Map<String, Bitmap>, selectedId: String?, actions: PdfPlacementActions, interactive: Boolean,
 ) {
     val density = LocalDensity.current
     val placement = visual.placement
     val bounds = visual.bounds
-    val selected = placement.id == state.selectedId
-    val description = stringResource(R.string.signature_placed, placement.pageIndex + 1)
+    val selected = placement.id == selectedId
+    val description = visual.dateText?.let { stringResource(R.string.date_placed, it, placement.pageIndex + 1) }
+        ?: stringResource(R.string.signature_placed, placement.pageIndex + 1)
     val moveLeft = stringResource(R.string.signature_move_left)
     val moveRight = stringResource(R.string.signature_move_right)
     val moveUp = stringResource(R.string.signature_move_up)
     val moveDown = stringResource(R.string.signature_move_down)
     val grow = stringResource(R.string.signature_grow)
     val shrink = stringResource(R.string.signature_shrink)
-    val remove = stringResource(R.string.signature_remove_placement)
-    val actions = listOf(
-        CustomAccessibilityAction(moveLeft) { model.movePlacement(placement.id, -.02f, 0f); true },
-        CustomAccessibilityAction(moveRight) { model.movePlacement(placement.id, .02f, 0f); true },
-        CustomAccessibilityAction(moveUp) { model.movePlacement(placement.id, 0f, -.02f); true },
-        CustomAccessibilityAction(moveDown) { model.movePlacement(placement.id, 0f, .02f); true },
-        CustomAccessibilityAction(grow) { model.resizePlacement(placement.id, .02f); true },
-        CustomAccessibilityAction(shrink) { model.resizePlacement(placement.id, -.02f); true },
-        CustomAccessibilityAction(remove) { model.removePlacement(placement.id); true },
+    val remove = stringResource(if (visual.dateText == null) R.string.signature_remove_placement else R.string.date_remove)
+    val accessibilityActions = listOf(
+        CustomAccessibilityAction(moveLeft) { actions.move(placement.id, -.02f, 0f); true },
+        CustomAccessibilityAction(moveRight) { actions.move(placement.id, .02f, 0f); true },
+        CustomAccessibilityAction(moveUp) { actions.move(placement.id, 0f, -.02f); true },
+        CustomAccessibilityAction(moveDown) { actions.move(placement.id, 0f, .02f); true },
+        CustomAccessibilityAction(grow) { actions.resize(placement.id, .02f); true },
+        CustomAccessibilityAction(shrink) { actions.resize(placement.id, -.02f); true },
+        CustomAccessibilityAction(remove) { actions.remove(placement.id); true },
     )
     Box(
         Modifier.offset { IntOffset(bounds.left.roundToInt(), bounds.top.roundToInt()) }
@@ -111,21 +120,21 @@ private fun SignatureVisualContent(
             .then(if (interactive) Modifier.semantics {
                 contentDescription = description
                 this.selected = selected
-                onClick { model.selectPlacement(placement.id); true }
-                customActions = actions
+                onClick { actions.select(placement.id); true }
+                customActions = accessibilityActions
             } else Modifier),
     ) {
-        state.images[placement.signatureId]?.let {
+        images[placement.signatureId]?.let {
             Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
         }
     }
     if (selected) {
-        PlacementHandle(bounds.left, bounds.top, R.drawable.ic_move, stringResource(R.string.signature_move),
-            interactive, actions.take(4), onClick = { model.selectPlacement(placement.id) })
-        PlacementHandle(bounds.right, bounds.bottom, R.drawable.ic_resize, stringResource(R.string.signature_resize),
-            interactive, actions.subList(4, 6), onClick = { model.resizePlacement(placement.id, .02f) })
+        PlacementHandle(bounds.left, bounds.top, R.drawable.ic_move, stringResource(if (visual.dateText == null) R.string.signature_move else R.string.date_move),
+            interactive, accessibilityActions.take(4), onClick = { actions.select(placement.id) })
+        PlacementHandle(bounds.right, bounds.bottom, R.drawable.ic_resize, stringResource(if (visual.dateText == null) R.string.signature_resize else R.string.date_resize),
+            interactive, accessibilityActions.subList(4, 6), onClick = { actions.resize(placement.id, .02f) })
         PlacementHandle(bounds.right, bounds.top, R.drawable.ic_delete, remove,
-            interactive, emptyList(), onClick = { model.removePlacement(placement.id) })
+            interactive, emptyList(), onClick = { actions.remove(placement.id) })
     }
 }
 
