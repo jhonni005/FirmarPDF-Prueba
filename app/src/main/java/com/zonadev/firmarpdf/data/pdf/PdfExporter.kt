@@ -30,7 +30,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.FilterInputStream
-import java.io.FilterOutputStream
 import java.io.InputStream
 import java.io.Closeable
 import kotlin.coroutines.CoroutineContext
@@ -55,6 +54,8 @@ class PdfExporter(
         var outputSize = -1L
         var success = false
         var saveCallMs = 0L
+        var saveIo = PdfSaveIoMetrics()
+        val debugTiming = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         var historyMs = 0L
         var destination: PublicPdfDestination? = null
         var document: PDDocument? = null
@@ -99,12 +100,21 @@ class PdfExporter(
                 val raw = resolver.openOutputStream(target.uri, "w") ?: throw PdfExportException(PdfExportError.WRITE)
                 raw.use {
                     abortable(it) {
-                    val checked = object : FilterOutputStream(it) {
-                        override fun write(b: Int) { jobContext.ensureActive(); out.write(b); outputSize = maxOf(0L, outputSize) + 1 }
-                        override fun write(b: ByteArray, off: Int, len: Int) { jobContext.ensureActive(); out.write(b, off, len); outputSize = maxOf(0L, outputSize) + len }
-                    }
-                    val saveClock = SystemClock.elapsedRealtime()
-                    try { doc.save(checked) } finally { saveCallMs = SystemClock.elapsedRealtime() - saveClock }
+                        val checked = PdfSaveOutputStream(
+                            destination = it,
+                            checkActive = { jobContext.ensureActive() },
+                            debugNanoTime = if (debugTiming) ({ SystemClock.elapsedRealtimeNanos() }) else null,
+                        )
+                        try {
+                            val saveClock = SystemClock.elapsedRealtime()
+                            try { doc.save(checked) } finally {
+                                saveCallMs = SystemClock.elapsedRealtime() - saveClock
+                                // Congelar dentro de save: la limpieza posterior no pertenece a saveMs.
+                                saveIo = checked.metrics()
+                            }
+                        } finally {
+                            try { checked.close() } finally { outputSize = checked.bytesWritten }
+                        }
                     }
                 }
                 doc.close()
@@ -150,10 +160,15 @@ class PdfExporter(
             runCatching { document?.close() }
             runCatching { destination?.discardUnpublished() }
             mutex.unlock()
-            if ((context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            if (debugTiming) {
+                val destinationIoMs = (saveIo.writeNanos + saveIo.flushCloseNanos) / 1_000_000L
                 Log.d("PdfExportTiming", "sourceMs=${elapsed[0]} loadMs=${elapsed[1]} annotateMs=${elapsed[2]} " +
                     "saveMs=$saveCallMs writeStageMs=${elapsed[3]} verifyPublishMs=${elapsed[4]-historyMs} historyMs=$historyMs totalMs=${SystemClock.elapsedRealtime()-start} " +
-                    "inputBytes=$inputSize outputBytes=$outputSize access=stream success=$success")
+                    "inputBytes=$inputSize outputBytes=$outputSize access=stream success=$success " +
+                    "destWriteMs=${saveIo.writeNanos / 1_000_000L} destFlushCloseMs=${saveIo.flushCloseNanos / 1_000_000L} " +
+                    "pdfBoxOtherMs=${(saveCallMs - destinationIoMs).coerceAtLeast(0L)} " +
+                    "pdfWriteCalls=${saveIo.pdfWriteCalls} pdfSmallWrites=${saveIo.pdfSmallWrites} destWriteCalls=${saveIo.destinationWriteCalls} " +
+                    "bufferBytes=${PdfSaveOutputStream.BUFFER_BYTES} destination=${destination?.timingKind ?: "unopened"}")
             }
         }
     }

@@ -23,6 +23,8 @@ internal class PublicPdfDestination private constructor(
     private val pendingFile: File? = null,
 ) {
     private var published = false
+    // Categoría fija para comparar mediciones; no identifica archivo, URI ni proveedor.
+    val timingKind: String get() = if (pendingFile == null) "media-store" else "legacy-file"
 
     suspend fun publish(): Uri {
         if (Build.VERSION.SDK_INT >= 29) {
