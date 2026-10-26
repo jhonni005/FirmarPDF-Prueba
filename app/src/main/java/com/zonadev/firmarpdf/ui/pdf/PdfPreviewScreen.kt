@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.zonadev.firmarpdf.R
+import com.zonadev.firmarpdf.BuildConfig
 import com.zonadev.firmarpdf.data.pdf.PdfPreviewSession
 import com.zonadev.firmarpdf.data.signature.PdfSignatureBounds
 import com.zonadev.firmarpdf.data.signature.placementBounds
@@ -85,8 +86,11 @@ fun PdfPreviewScreen(
     )
     val saving = exportState is PdfExportUiState.Saving
     val context = LocalContext.current
+    var pdfiumPermission by rememberSaveable { mutableStateOf(false) }
     val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) export.save(draft) else export.permissionDenied()
+        if (granted) {
+            if (pdfiumPermission) export.savePdfium(draft) else export.save(draft)
+        } else export.permissionDenied()
     }
     var discard by rememberSaveable { mutableStateOf(false) }
     BackHandler {
@@ -116,12 +120,24 @@ fun PdfPreviewScreen(
         ) {
             Text(stringResource(R.string.preview_title), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = {
+                pdfiumPermission = false
                 if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 } else export.save(draft)
             }, enabled = state is PdfPreviewState.Ready && draft.hasAnnotations && !saving && !signatureDraft.busy && drawingDraft.active == null) {
                 Text(stringResource(R.string.pdf_save))
             }
+        }
+        if (BuildConfig.DEBUG) TextButton(onClick = {
+            if (export.checkPdfiumDraft(draft)) {
+                pdfiumPermission = true
+                if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                } else export.savePdfium(draft)
+            }
+        }, enabled = state is PdfPreviewState.Ready && !saving && !signatureDraft.busy && drawingDraft.active == null,
+            modifier = Modifier.align(Alignment.End).padding(horizontal = 12.dp)) {
+            Text(stringResource(R.string.pdf_save_pdfium))
         }
         when (state) {
             PdfPreviewState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -149,7 +165,9 @@ fun PdfPreviewScreen(
                         }, contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator()
-                                Text(stringResource(exportProgressText((exportState as PdfExportUiState.Saving).stage)))
+                                val savingState = exportState as PdfExportUiState.Saving
+                                Text(stringResource(if (savingState.pdfium && savingState.stage == PdfExportStage.ANNOTATE)
+                                    R.string.pdfium_export_annotate else exportProgressText(savingState.stage)))
                                 TextButton(onClick = export::cancel) { Text(stringResource(R.string.cancel)) }
                             }
                         }
@@ -363,6 +381,8 @@ private fun exportProgressText(stage: PdfExportStage) = when (stage) {
 }
 
 private fun exportErrorText(reason: PdfExportError) = when (reason) {
+    PdfExportError.NO_SIGNATURES -> R.string.pdfium_export_no_signatures
+    PdfExportError.PDFIUM_SIGNATURES_ONLY -> R.string.pdfium_export_signatures_only
     PdfExportError.SOURCE -> R.string.pdf_export_source_error
     PdfExportError.PROTECTED -> R.string.pdf_export_protected
     PdfExportError.CERTIFIED -> R.string.pdf_export_certified

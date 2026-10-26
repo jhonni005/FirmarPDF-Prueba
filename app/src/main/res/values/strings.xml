@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Firma PDF</string>
+    <string name="app_name">Firma PDF - Prueba</string>
     <string name="home_title">Inicio</string>
     <string name="sign_pdf_title">Firmar PDF</string>
     <string name="signed_documents_title">Documentos firmados</string>
@@ -117,6 +117,10 @@
     <string name="drawing_hint">Dibuja sobre una página. Pulsa Terminar para volver a desplazar el PDF.</string>
     <string name="recent_location_unknown">Ubicación no disponible</string>
     <string name="pdf_save">Guardar</string>
+    <string name="pdf_save_pdfium">Guardar con PDFium</string>
+    <string name="pdfium_export_no_signatures">Coloca al menos una firma antes de guardar con PDFium.</string>
+    <string name="pdfium_export_signatures_only">La exportación experimental con PDFium todavía no admite fechas ni dibujos. Quítalos del borrador o usa Guardar.</string>
+    <string name="pdfium_export_annotate">Preparando e insertando las firmas con PDFium…</string>
     <string name="pdf_discard_title">¿Descartar los cambios?</string>
     <string name="pdf_discard_message">Se cerrará el borrador sin guardar estos cambios. Si hay una exportación en curso, se cancelará cuando sea posible. El original permanece intacto.</string>
     <string name="pdf_saved_title">PDF nuevo creado</string>

@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Firmar PDF"
 include(":app")
- 
+include(":pdfium-local")
+project(":pdfium-local").projectDir = file("third_party/pdfiumandroid")

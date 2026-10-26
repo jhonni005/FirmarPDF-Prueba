@@ -1,6 +1,6 @@
 # Firma PDF — Arquitectura v0.1
 
-Política vigente: Guardar crea siempre un PDF NUEVO en Documents/FirmarPdf para cualquier origen. Se mantienen Room v2 y sus datos. La finalización actual (§23) conserva cierre/salida no vacía/publicación/registro, sin segunda carga PDFBox ni comparación de páginas del resultado. Las secciones históricas conservan decisiones y pruebas anteriores, sin habilitar modificación del original.
+Política vigente: Guardar crea siempre un PDF NUEVO en Documents/FirmarPdf para cualquier origen. Se mantienen Room v2 y sus datos. La finalización actual (§23) conserva cierre/salida no vacía/publicación/registro, sin segunda carga PDFBox ni comparación de páginas del resultado. Las secciones históricas conservan decisiones y pruebas anteriores, sin habilitar modificación del original. Esta copia `FirmarPDF - PdfiumPrueba` usa el identificador y la configuración sin Firebase descritos en §24; las referencias históricas a su integración no se aplican a esta copia. §25 incorpora el binding local y la exportación experimental PDFium junto a Guardar/PDFBox, siempre hacia otro PDF y sin guardado incremental.
 
 ## 1. Objetivo y límites
 
@@ -8,10 +8,10 @@ Abrir un PDF, dibujar o reutilizar una firma manuscrita, colocarla en una o vari
 
 ## 2. Base técnica ya elegida
 
-- `namespace` y `applicationId`: `com.zonadev.firmarpdf`; `minSdk 28`, `compileSdk 36`, `targetSdk 36`.
+- `namespace` y paquetes Kotlin: `com.zonadev.firmarpdf`; `applicationId` de esta copia: `com.zonadev.firmarpdf.pdfiumtest`; `minSdk 28`, `compileSdk 36`, `targetSdk 36`.
 - Kotlin `2.2.0`, AGP `8.9.2`, Java/JVM `11`, Compose BOM `2024.09.00`. Kotlin se cambia por petición explícita para resolver BUILD-001; las demás versiones se conservan.
-- PDFium `io.legere:pdfiumandroid:1.0.35` para visualizar; PDFBox Android `2.0.27.0` para producir la firma gráfica. Inicializar `PDFBoxResourceLoader` con el contexto de aplicación antes de usar PDFBox.
-- Base incorporada: Lifecycle Compose `2.9.4`, Navigation Compose `2.8.0`, Room `2.8.2` + KSP `2.2.0-2.0.2` con KSP2, Firebase BoM `34.4.0`, Google Services `4.4.4` y plugin Crashlytics `3.0.6`. PDFium y PDFBox se centralizan en el catálogo sin cambiar sus versiones. DataStore queda pendiente del consentimiento persistente; no se añade una dependencia sin uso. Evitar Paging, Hilt, Koin y más módulos hasta que un problema concreto los justifique.
+- Binding PDFium `v1.0.35` incorporado localmente en `:pdfium-local` (§25) para visualizar y para el exportador experimental de firmas; sustituye al AAR `io.legere:pdfiumandroid:1.0.35`. PDFBox Android `2.0.27.0` conserva el botón Guardar y todas sus herramientas. Inicializar `PDFBoxResourceLoader` con el contexto de aplicación antes de usar PDFBox.
+- Base incorporada: Lifecycle Compose `2.9.4`, Navigation Compose `2.8.0`, Room `2.8.2` + KSP `2.2.0-2.0.2` con KSP2. Esta copia excluye Firebase, Google Services y Crashlytics (§24). PDFium y PDFBox se centralizan en el catálogo sin cambiar sus versiones. DataStore queda pendiente del consentimiento persistente; no se añade una dependencia sin uso. Evitar Paging, Hilt, Koin y más módulos hasta que un problema concreto los justifique.
 - Confirmar compatibilidad de todo el paquete nativo con páginas de 16 KB en el APK/AAB y con un emulador de 16 KB. No equivale a mirar únicamente la dependencia de PDFium.
 
 ## 3. Responsabilidades y dependencias
@@ -382,6 +382,192 @@ PdfExportTiming sustituye verifyPublishMs por publishMs: duración de la etapa d
 El usuario informa que comprobó el PDF de 189,6 MB con firma y fecha en cinco visores de terceros antes de esta modificación. Se registra como evidencia aportada por él, no como prueba ejecutada por el agente ni como resultado de esta nueva compilación. No se conocen aquí sus nombres/versiones ni se generaliza a todos los documentos, todas las páginas, dibujo libre, proveedores o dispositivos. El alcance y estado de las verificaciones se registran en EXPORT-002/003 de BACKLOG.
 
 Para repetir: abrir el mismo ORIGINAL de 189,6 MB, colocar firma/fecha equivalentes, guardar una copia nueva en el mismo destino y enviar la línea COMPLETA de PdfExportTiming, desde sourceMs hasta destination, incluidos publishMs/historyMs/totalMs, inputBytes/outputBytes y todas las métricas del búfer. Confirmar también que el resultado se abre con firma/fecha. Usar un registro previo de ese mismo PDF para comparar; el ejemplo histórico inputBytes=4648044 pertenece a otro tamaño y no sirve de referencia controlada para 189,6 MB. No prometer ahorro de tiempo hasta disponer del registro posterior.
+
+## 24. Copia PdfiumPrueba sin Firebase
+
+La copia `FirmarPDF - PdfiumPrueba` conserva `applicationId = com.zonadev.firmarpdf.pdfiumtest`, con namespace y paquetes Kotlin `com.zonadev.firmarpdf`. Se retiran la aplicación y declaración raíz de los plugins Google Services/Crashlytics, las dependencias Firebase BoM/Analytics/Crashlytics y sus entradas exclusivas del catálogo. Se elimina únicamente su `app/google-services.json`, sin adaptar clientes ni identificadores. También se retiran los metadatos de recopilación de esos SDK del manifiesto.
+
+El arranque existente en `FirmaPdfApplication` inicializa PDFBox y mantiene el contenedor local de forma diferida. El código fuente no contiene inicializaciones, llamadas ni interfaces de Analytics/Crashlytics; por ello no se añaden implementaciones sin operaciones. Sin los SDK no se incorpora su inicialización automática mediante providers. Las referencias anteriores a Firebase describen la integración histórica o decisiones de producto, no una dependencia de esta copia.
+
+En ese incremento se mantuvieron un único módulo `:app`, las versiones de todas las dependencias conservadas, PDFium, PDFBox, Room, navegación, visor, firmas y exportación. La política de guardado permanece igual: PDF nuevo con save normal, sin sobrescribir el origen. La retirada de Firebase no incorporó puente JNI ni guardado incremental; el binding local posterior se describe en §25. El proyecto original queda fuera de esta decisión. El alcance y resultado de la verificación se registran exclusivamente en BUILD-003 de `BACKLOG.md`.
+
+## 25. Exportador experimental de firmas con PDFium
+
+### Biblioteca y alcance
+
+Por petición explícita, esta copia añade el módulo Android de biblioteca `:pdfium-local`
+en `third_party/pdfiumandroid`, además de `:app`. Es una excepción acotada a la
+regla general de un único módulo, necesaria para modificar el puente JNI existente.
+Procede de PdfiumAndroidKt, etiqueta `v1.0.35`, revisión
+`2052da7c071002446f1e2dff082b373a17ebadd0`. Se conservan fuentes principales,
+headers, licencias y avisos, sin aplicación de ejemplo ni módulos Arrow/publicación.
+`README.FirmarPDF.md` documenta origen y modificaciones; `prebuilt/SHA256SUMS.txt`
+identifica los cuatro `libpdfium.so` originales. La dependencia Maven se sustituye
+por el proyecto local: una sola definición de clases y un solo puente compilado.
+
+El anfitrión mantiene AGP 8.9.2, Kotlin 2.2.0, Gradle 8.11.1 y Java/JVM 11,
+PDFBox, Room, Compose y navegación. El módulo adapta el build upstream sin adoptar
+su toolchain. Usa NDK instalado 26.3.11579264 y CMake 3.22.1 explícitos, frente al
+NDK 29.0.13846066 declarado por la etiqueta. Compila únicamente el puente C++17,
+con STL estática y opciones de linker para segmentos de 16 KB. CMake conserva
+`jnigraphics`, `android` y `log` e importa PDFium precompilado desde `prebuilt`
+para enlazar. El sourceSet jniLibs apunta explícitamente a esa carpeta para
+empaquetar una sola copia de cada binario junto al puente. No se compila PDFium.
+
+### Inserción y geometría
+
+`PdfPage.insertImage` y `generateContent` respetan `PdfiumCore.lock` y comprueban
+que documento/página estén abiertos. El JNI accede a `DocumentFile.pdfDocument`,
+no convierte el wrapper en FPDF_DOCUMENT. Acepta Bitmap de software ARGB_8888/sRGB;
+el exportador decodifica PNG completos propios y convierte configuraciones no
+ARGB_8888 mediante copia, sin prestar ni alterar bitmaps de la UI o del almacén.
+
+La conversión valida dimensiones, formato, alfa y stride. Lee RGBA Android y
+escribe BGRA de alfa independiente en un bitmap propiedad de PDFium, respetando
+ambos strides. Intercambia R/B una vez; despremultiplica con redondeo/clamp,
+conserva alfa parcial y pone RGB a cero con alfa cero. El modo obtenido de
+`Bitmap.hasAlpha/isPremultiplied` cubre API 28/29, donde flags aún era reservado;
+desde API 30 se contrasta con AndroidBitmapInfo.flags. Cada lock exitoso tiene
+unlock mediante RAII; nunca se libera memoria Android ni se utiliza tras unlock.
+
+Se crean bitmap y objeto imagen, se asigna con FPDFImageObj_SetBitmap y se fija
+la matriz completa con FPDFImageObj_SetMatrix. La matriz transforma la imagen
+unitaria, no sus dimensiones en píxeles. FPDFPage_InsertObject devuelve void en
+estos headers; se comprueban conteo/identidad tras insertar y se transfiere la
+propiedad del objeto a la página. Los recursos propios se liberan con RAII;
+un fallo posterior abandona el documento privado, sin publicar una salida parcial.
+`generateContent` se llama una vez por página modificada tras todas sus firmas.
+
+`PdfiumExportGeometry` adapta FPDF_GetPageBoundingBox (intersección efectiva
+MediaBox/CropBox en coordenadas PDF, con top mayor que bottom) y la rotación
+intrínseca de PDFium (0..3 cuartos de vuelta). Reutiliza
+`normalizedSignaturePlacementToPdfMatrix` y `PdfExportPage` para obtener los seis
+coeficientes en el espacio PDF sin girar, incluyendo offsets. No usa
+`getPageMatrix` del binding, no añade otra inversión vertical ni otra rotación.
+Las comprobaciones matemáticas no certifican la posición visual del PDF nativo.
+
+### Recorrido separado y comparación
+
+`PdfiumSignatureExporter` abre un descriptor de solo lectura desde el URI y su
+propio PdfDocument. El documento del visor conserva su ciclo de vida y no se
+modifica. No hay copia previa del origen, ByteArray del PDF ni llamadas PDFBox
+en el recorrido experimental. La inicialización general de PDFBox para el botón
+Guardar existente permanece en Application.
+
+Antes de abrir/exportar se rechazan borradores sin firmas o con fechas/dibujos,
+sin omitir elementos. Se comprueban número de páginas y restricciones mediante
+permisos/cifrado y FPDF_GetSignatureCount. Este control no equivale a validar
+estructuralmente todas las variantes de firmas/certificación de PDFs dañados.
+Cada PNG se carga completo una vez por exportación; sus colocaciones se agrupan
+por página y se insertan todas. La memoria de imágenes distintas puede crecer
+con el borrador; una falta de memoria cancela la salida y conserva el editor.
+
+El guardado llama `saveAsCopy(callback, FPDF_NO_INCREMENTAL)` explícitamente.
+Reutiliza PublicPdfDestination, PdfSaveOutputStream (64 KiB), estados de progreso,
+errores y PdfExportHistory/Room v2. La reserva/escritura es siempre otro PDF en
+Documents/FirmarPdf. Un fallo del callback devuelve cero, conserva su excepción
+para propagarla y hace fallar el guardado; JNI libera las referencias locales de
+cada bloque, comprueba excepciones y no interpreta -1 como éxito. El cierre del
+búfer también puede hacer fallar el resultado. El puente elimina además un unlock
+duplicado del mutex de inicialización de upstream.
+
+La salida y documento/descriptor/imágenes se cierran antes de publicar; se exige
+conteo de bytes mayor que cero. No se reabre el resultado. Cancelación y fallos
+anteriores limpian únicamente la salida pendiente. Publicación y registro se
+completan sin cancelar entre ambos; un fallo Room conserva el PDF publicado y
+avisa. Proveedores bloqueados pueden demorar la cancelación; no se promete
+interrupción instantánea de una llamada nativa o apertura del proveedor.
+
+`Guardar` sigue utilizando PdfExporter/PDFBox con firmas, fechas y dibujos.
+`Guardar con PDFium` se muestra solo con BuildConfig.DEBUG y usa el mismo
+PdfExportViewModel, borrador y diálogo final. Todos los textos nuevos son recursos
+en español. Ambos exportadores comparten un Mutex de AppContainer, además de la
+exclusión de doble pulsación del ViewModel; no se ejecutan simultáneamente incluso
+desde distintos destinos de navegación. El borrador no se borra al guardar y el
+éxito no deshabilita el otro motor. Para comparar se debe elegir «Seguir en el visor»
+en el diálogo de resultado y exportar por el otro motor desde el mismo original,
+sin mover ni redimensionar las mismas firmas.
+
+### Intervalos de PdfiumExportTiming
+
+Solo debug registra una línea final mediante `Log.d("PdfiumExportTiming", ...)`,
+independiente del logger configurable del visor y de Firebase. Se conserva el
+resumen existente y sus campos. Se acumulan nanosegundos de
+`SystemClock.elapsedRealtimeNanos()` y se convierten a milisegundos enteros al
+emitir, también con fallo/cancelación si se alcanza finally. Los campos de etapas
+originales mantienen sus alcances disjuntos; los contadores nuevos son mediciones
+anidadas, sin nombres, rutas, URI, contenido ni excepciones originales:
+
+| Campo | Operaciones incluidas |
+| --- | --- |
+| openMs | Metadatos de origen, apertura del descriptor/PDFium, número de páginas y restricciones. PDFium puede leer páginas/contenido de forma diferida después. |
+| imagesMs | Lectura de PNG completos y preparación de bitmaps propios. |
+| insertMs | Apertura/cierre de páginas, geometría, conversión nativa de píxeles, inserción de todas las imágenes y una generación de contenido por página. |
+| saveMs | Reserva del destino, apertura de salida, saveAsCopy/callbacks, vaciado del búfer, cierre de salida y coordinación de su cierre al cancelar. |
+| closeMs | Cierre normal del documento/descriptor y liberación de imágenes antes de publicar. |
+| publishMs | Únicamente PublicPdfDestination.publish, sin Room ni reapertura. |
+| historyMs | Metadatos del resultado y transacción Room; no carga el PDF generado. |
+| totalMs | Operación completa, incluidos huecos entre etapas y limpieza final también ante error. No se suma otra vez a las etapas. |
+| inputBytes/outputBytes | statSize del descriptor (-1 desconocido) / bytes confirmados en el stream físico de salida. |
+| success/failure | Éxito de publicación o categoría fija del fallo/cancelación, sin datos del documento. |
+
+Validaciones previas de borrador y BUSY no abren exportación ni emiten esta línea.
+`load`/apertura implícita en openMs no significa haber leído todo el archivo:
+PDFium puede diferir lecturas al insertar, generar contenido y guardar.
+
+La inspección del recorrido muestra: FPDF_SaveAsCopy → FileWrite::WriteBlockCallback
+(NewByteArray y SetByteArrayRegion por bloque) → PdfWriteCallback.WriteBlock Kotlin
+→ PdfSaveOutputStream → BufferedOutputStream de 64 KiB → sink → OutputStream de
+ContentResolver. El callback sí utiliza ese búfer y no llama flush ni close.
+Hay una única apertura de salida, sin acumular el PDF completo en un ByteArray
+del exportador. El ByteArray es por bloque; no se deduce el consumo interno de
+memoria de PDFium a partir de eso. La búsqueda de clase/método JNI ocurre una vez
+por saveAsCopy, mientras la asignación/copia de arrays y comprobaciones JNI se
+repiten por bloque. No se modifica ese puente para optimizar un coste no medido.
+El cierre del búfer ocurre en checked.use; abortable y raw.use cierran además
+el raw como protección normal/cancelación, sin reaperturas ni cierres por callback.
+Se conserva esa secuencia y no se añade otra capa de buffering.
+
+| Campo nuevo | Intervalo o contador |
+| --- | --- |
+| callbackCalls | Entradas en WriteBlock Kotlin, incluso la que falla o solicita cancelar. |
+| callbackBytes | Suma de tamaños recibidos, aunque después falle escribirlos; null no aporta bytes. No son bytes confirmados del destino. |
+| callbackSmallWrites | Callbacks con ByteArray de menos de 1024 bytes, incluido tamaño cero; null no se cuenta. |
+| callbackMs | Tiempo acumulado dentro del callback Kotlin, incluidos contadores, comprobación de cancelación y output.write; no incluye necesariamente asignación/copia del ByteArray hecha antes en C++. |
+| destWriteCalls | Intentos de write no vacíos al stream real, debajo del búfer; outputBytes sigue contando solo bytes cuyo write terminó. |
+| destWriteMs | Tiempo acumulado en esos write reales, también si lanzan una excepción; incluye los que vacían el búfer después de saveAsCopy. |
+| destFlushCloseMs | Tiempo en flush y close del sink real a través del wrapper existente; excluye las escrituras que vacían el búfer, incluidas en destWriteMs, y los cierres defensivos directos de raw.use/abortable. No mide fsync ni garantiza persistencia física. |
+| bufferBytes | 65536, sin cambiar el búfer existente. |
+| saveOtherMs | saveMs histórico (etapa completa de escritura) menos el tiempo de callbacks que ocurrió dentro de saveAsCopy. Incluye preparación del destino y vaciado/cierre posteriores; no es un tiempo exclusivo del motor. |
+| saveCallMs | Solo doc.saveAsCopy y su retorno/excepción, antes de checked.use/flush/close. Incluye espera del lock del binding y trabajo JNI/PDFium/callbacks. |
+| saveCallOtherMs | saveCallMs menos callbacks ocurridos dentro de esa misma llamada. Excluye el vaciado/cierre posteriores. No es tiempo de CPU: incluye lecturas internas, serialización, esperas y trabajo JNI antes/después de Kotlin. |
+| destination | media-store, legacy-file o unopened; categoría técnica fija. |
+
+Los residuos se calculan en nanosegundos antes de convertir, con mínimo cero.
+`callbackMs` está dentro de `saveCallMs` y del `saveMs` histórico. Parte de
+`destWriteMs` está dentro de callbackMs y otra puede ocurrir después de saveAsCopy
+al vaciar el búfer; no se resta todo destWriteMs ni destFlushCloseMs a saveCallMs.
+El flush final escribe los bytes pendientes, contabilizados en destWriteMs,
+y luego hace flush/close del sink, contabilizados en destFlushCloseMs. Los tiempos
+no se suman como etapas independientes. El resumen sigue emitiéndose una sola vez
+después de la limpieza, sin logs por bloque y sin alterar propagación de errores,
+cancelación ni publicación para obtener mediciones.
+
+Para conservar la comparación con registros previos, `saveMs` NO cambia de
+significado. El saveMs de PDFBox mide solo document.save y se compara con
+saveCallMs de PDFium considerando las diferencias de carga/serialización; para
+la etapa de salida completa, considerar writeStageMs de PDFBox frente a saveMs
+de PDFium, y closeMs por separado según su alcance. No sumar los campos anidados
+a totalMs ni atribuir a una sola etapa el trabajo de carga diferida. Alternar motores
+con el mismo original, firmas, posiciones, dispositivo/proveedor y condiciones,
+separar primera pasada de repeticiones y comparar totalMs, dispersión y etapas.
+No se deduce una mejora de rendimiento por compilar ni por una sola observación.
+
+El resultado de compilación/empaquetado y las comprobaciones manuales de color,
+transparencia, posición, rotación, CropBox, varias páginas, visores externos,
+cancelación, almacenamiento y páginas de memoria de 16 KB se registran únicamente
+en `PDFIUM-EXPORT-001` de BACKLOG. No se instalan APK ni se ejecutan pruebas
+instrumentadas como parte de este incremento.
 
 ## Fuentes técnicas
 

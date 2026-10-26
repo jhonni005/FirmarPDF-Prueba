@@ -11,6 +11,8 @@ import com.zonadev.firmarpdf.data.recentpdf.RecentPdfRepository
 import com.zonadev.firmarpdf.data.recentpdf.PdfThumbnailCache
 import com.zonadev.firmarpdf.data.pdf.PdfExportHistory
 import com.zonadev.firmarpdf.data.pdf.PdfExporter
+import com.zonadev.firmarpdf.data.pdf.PdfiumSignatureExporter
+import kotlinx.coroutines.sync.Mutex
 import io.legere.pdfiumandroid.PdfiumCore
 import io.legere.pdfiumandroid.LoggerInterface
 import io.legere.pdfiumandroid.util.Config
@@ -35,6 +37,10 @@ class AppContainer(context: Context) {
     val signedPdfRepository = SignedPdfRepository(database.signedPdfDao())
     val selectedPdfReader = SelectedPdfReader(context.applicationContext.contentResolver)
     val recentPdfRepository = RecentPdfRepository(database.recentPdfDao(), contentResolver, selectedPdfReader)
-    val pdfExporter = PdfExporter(context.applicationContext, savedSignatureStore, selectedPdfReader, PdfExportHistory(database, selectedPdfReader))
+    private val exportMutex = Mutex()
+    private val exportHistory = PdfExportHistory(database, selectedPdfReader)
+    val pdfExporter = PdfExporter(context.applicationContext, savedSignatureStore, selectedPdfReader, exportHistory, exportMutex)
+    val pdfiumSignatureExporter = PdfiumSignatureExporter(context.applicationContext, savedSignatureStore, selectedPdfReader,
+        exportHistory, { pdfiumCore }, exportMutex)
     val pdfThumbnailCache = PdfThumbnailCache(File(context.applicationContext.cacheDir, "recent_pdf_thumbnails"), contentResolver) { pdfiumCore }
 }

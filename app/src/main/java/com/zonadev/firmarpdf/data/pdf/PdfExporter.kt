@@ -41,8 +41,8 @@ class PdfExporter(
     private val signatures: SavedSignatureStore,
     private val reader: SelectedPdfReader,
     private val history: PdfExportHistory,
+    private val mutex: Mutex = Mutex(),
 ) {
-    private val mutex = Mutex()
     private val resolver get() = context.contentResolver
 
     suspend fun export(source: Uri, draft: PdfExportDraft, progress: (PdfExportStage) -> Unit): PdfExportResult = withContext(Dispatchers.IO) {

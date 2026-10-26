@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Analytics no necesita identificadores publicitarios en este producto. -->
+    <!-- No se solicitan identificadores publicitarios en este producto. -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
@@ -22,11 +22,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FirmarPDF"
         tools:targetApi="31">
-        <meta-data android:name="firebase_data_collection_default_enabled" android:value="false" />
-        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
-        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
-        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
-        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
