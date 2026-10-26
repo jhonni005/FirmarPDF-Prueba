@@ -29,7 +29,7 @@ import java.io.IOException
 import kotlin.coroutines.coroutineContext
 
 /** Experimental, signatures only. Owns a read-only descriptor/document, independent of the viewer.
- * It never copies the input, uses PDFBox, or reloads the generated PDF.
+ * It never pre-copies the input, uses PDFBox, or reloads the generated PDF.
  */
 class PdfiumSignatureExporter(
     private val context: Context,
@@ -39,7 +39,12 @@ class PdfiumSignatureExporter(
     private val core: () -> PdfiumCore,
     private val mutex: Mutex = Mutex(),
 ) {
-    suspend fun export(source: Uri, draft: PdfExportDraft, progress: (PdfExportStage) -> Unit): PdfExportResult = withContext(Dispatchers.IO) {
+    suspend fun export(
+        source: Uri,
+        draft: PdfExportDraft,
+        saveMode: PdfiumSaveMode = PdfiumSaveMode.FULL,
+        progress: (PdfExportStage) -> Unit,
+    ): PdfExportResult = withContext(Dispatchers.IO) {
         pdfiumDraftError(draft)?.let { throw PdfExportException(it) }
         if (!mutex.tryLock()) throw PdfExportException(PdfExportError.BUSY)
         val start = if (BuildConfig.DEBUG) SystemClock.elapsedRealtimeNanos() else 0L
@@ -177,7 +182,7 @@ class PdfiumSignatureExporter(
                                 val saveClock = if (BuildConfig.DEBUG) SystemClock.elapsedRealtimeNanos() else 0L
                                 val callbacksBeforeSave = callbackNanos
                                 val saved = try {
-                                    doc.saveAsCopy(callback, PdfDocument.FPDF_NO_INCREMENTAL)
+                                    doc.saveAsCopy(callback, saveMode.saveFlags)
                                 } finally {
                                     if (BuildConfig.DEBUG) {
                                         // Capture only callbacks inside this call; the final buffer drain is later.
@@ -273,7 +278,8 @@ class PdfiumSignatureExporter(
                         "readErrors=${nativeTiming?.readErrors ?: 0L} " +
                         "nativeWriteCallbackMs=${(nativeTiming?.nativeWriteCallbackNanos ?: 0L) / 1_000_000L} " +
                         "jniArrayPrepareMs=${(nativeTiming?.jniArrayPrepareNanos ?: 0L) / 1_000_000L} " +
-                        "nativeTimingAvailable=${nativeTiming != null}")
+                        "nativeTimingAvailable=${nativeTiming != null} " +
+                        "requestedSaveMode=${saveMode.timingValue} saveFlags=${saveMode.saveFlags}")
             }
         }
     }

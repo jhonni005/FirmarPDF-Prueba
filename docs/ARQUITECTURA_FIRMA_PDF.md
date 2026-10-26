@@ -1,6 +1,6 @@
 # Firma PDF — Arquitectura v0.1
 
-Política vigente: Guardar crea siempre un PDF NUEVO en Documents/FirmarPdf para cualquier origen. Se mantienen Room v2 y sus datos. La finalización actual (§23) conserva cierre/salida no vacía/publicación/registro, sin segunda carga PDFBox ni comparación de páginas del resultado. Las secciones históricas conservan decisiones y pruebas anteriores, sin habilitar modificación del original. Esta copia `FirmarPDF - PdfiumPrueba` usa el identificador y la configuración sin Firebase descritos en §24; las referencias históricas a su integración no se aplican a esta copia. §25 incorpora el binding local y la exportación experimental PDFium junto a Guardar/PDFBox, siempre hacia otro PDF y sin guardado incremental.
+Política vigente: Guardar crea siempre un PDF NUEVO en Documents/FirmarPdf para cualquier origen. Se mantienen Room v2 y sus datos. La finalización actual (§23) conserva cierre/salida no vacía/publicación/registro, sin segunda carga PDFBox ni comparación de páginas del resultado. Las secciones históricas conservan decisiones y pruebas anteriores, sin habilitar modificación del original. Esta copia `FirmarPDF - PdfiumPrueba` usa el identificador y la configuración sin Firebase descritos en §24; las referencias históricas a su integración no se aplican a esta copia. §25 incorpora el binding local y el modo PDFium completo junto a Guardar/PDFBox. Por autorización explícita posterior, §26 añade únicamente a esta copia un modo PDFium incremental experimental, siempre hacia otro PDF. Las prohibiciones anteriores de incremental se mantienen como alcance histórico; la excepción actual no habilita sobrescribir originales ni usar saveIncremental de PDFBox.
 
 ## 1. Objetivo y límites
 
@@ -55,7 +55,7 @@ Para adjuntos externos, copiar el origen a caché privada **solo si** el motor r
 
 Para una salida nueva, intentar escribir el PDF final en la carpeta **pública** `Documents/FirmarPdf/` con la API de almacenamiento apropiada a la versión de Android y MIME `application/pdf`; reservar nombre sin colisiones. En Android 10+ estudiar la colección de documentos de MediaStore y `RELATIVE_PATH`/`IS_PENDING`, verificando en Android 10 y 15 la ruta visible y que `IS_PENDING` quede en 0. En Android 9 hay que resolver por separado la escritura en la carpeta pública (permiso de escritura de esa versión o selección de destino con SAF); no asumir que la ruta directa funcionará por tener `minSdk 28`. Si PDFBox puede escribir directamente a un destino nuevo e independiente, evitar una copia temporal adicional. En fallo, descartar el destino incompleto y conservar el estado del editor para reintentar.
 
-Actualizar originales queda fuera de esta política. No usar saveIncremental ni abrir el origen en escritura. Guardar siempre genera una salida nueva, cierra los flujos y comprueba páginas antes de publicar; un fallo conserva el borrador y nunca borra ni trunca el origen.
+Actualizar originales queda fuera de esta política. No usar saveIncremental de PDFBox ni abrir el origen en escritura. Guardar siempre genera una salida nueva y cierra los flujos; un fallo conserva el borrador y nunca borra ni trunca el origen. La finalización vigente (§23) no reabre el resultado ni compara sus páginas. Únicamente la acción debug de §26 solicita FPDF_INCREMENTAL de PDFium hacia un destino nuevo y vacío, sin cambiar la política del proyecto original.
 
 Orden de éxito vigente (§23): terminar escritura → cerrar flujos/documento → comprobar bytes escritos >0 → publicar resultado → registrar URI final en Room → mostrar éxito o resultado con advertencia si falla Room. No se reabre el resultado con PDFBox ni se compara su número de páginas; la integridad estructural/visual no se certifica automáticamente al guardar. Si el registro falla tras publicar, se conserva el archivo y se informa; un fallo anterior limpia solo la salida pendiente. El borrador se conserva ante errores de exportación.
 
@@ -462,7 +462,9 @@ Cada PNG se carga completo una vez por exportación; sus colocaciones se agrupan
 por página y se insertan todas. La memoria de imágenes distintas puede crecer
 con el borrador; una falta de memoria cancela la salida y conserva el editor.
 
-El guardado llama `saveAsCopy(callback, FPDF_NO_INCREMENTAL)` explícitamente.
+El modo FULL llama `saveAsCopy(callback, FPDF_NO_INCREMENTAL)` explícitamente.
+La opción incremental posterior (§26) reutiliza todo este recorrido con
+FPDF_INCREMENTAL, sin combinar flags ni cambiar el comportamiento predeterminado.
 Reutiliza PublicPdfDestination, PdfSaveOutputStream (64 KiB), estados de progreso,
 errores y PdfExportHistory/Room v2. La reserva/escritura es siempre otro PDF en
 Documents/FirmarPdf. Un fallo del callback devuelve cero, conserva su excepción
@@ -479,7 +481,8 @@ avisa. Proveedores bloqueados pueden demorar la cancelación; no se promete
 interrupción instantánea de una llamada nativa o apertura del proveedor.
 
 `Guardar` sigue utilizando PdfExporter/PDFBox con firmas, fechas y dibujos.
-`Guardar con PDFium` se muestra solo con BuildConfig.DEBUG y usa el mismo
+`Guardar con PDFium` (FULL) y la acción posterior `Guardar con PDFium incremental`
+(§26) se muestran solo con BuildConfig.DEBUG y usan el mismo
 PdfExportViewModel, borrador y diálogo final. Todos los textos nuevos son recursos
 en español. Ambos exportadores comparten un Mutex de AppContainer, además de la
 exclusión de doble pulsación del ViewModel; no se ejecutan simultáneamente incluso
@@ -637,6 +640,87 @@ transparencia, posición, rotación, CropBox, varias páginas, visores externos,
 cancelación, almacenamiento y páginas de memoria de 16 KB se registran únicamente
 en `PDFIUM-EXPORT-001` de BACKLOG. No se instalan APK ni se ejecutan pruebas
 instrumentadas como parte de este incremento.
+
+## 26. Modo PDFium incremental experimental hacia otro archivo
+
+El usuario autoriza explícitamente solicitar FPDF_INCREMENTAL solo en esta copia
+`FirmarPDF - PdfiumPrueba`, applicationId `com.zonadev.firmarpdf.pdfiumtest`.
+Esta decisión amplía el alcance anterior sin incremental (§25 y los incrementos
+históricos); no modifica el proyecto original de FirmarPDF ni LectorDocumentos.
+La política de destino permanece: origen de solo lectura y PDF NUEVO en
+Documents/FirmarPdf, con cierre, publicación e historial actuales.
+
+`PdfiumSaveMode` es una selección tipada con dos valores:
+
+| Acción | Recorrido | Flag solicitado |
+| --- | --- | --- |
+| Guardar | PdfExporter/PDFBox existente | document.save normal; sin flags PDFium |
+| Guardar con PDFium | PdfiumSignatureExporter, FULL predeterminado | PdfDocument.FPDF_NO_INCREMENTAL, valor 2 |
+| Guardar con PDFium incremental | Mismo PdfiumSignatureExporter, INCREMENTAL | PdfDocument.FPDF_INCREMENTAL, valor 1 |
+
+Las constantes se comprueban contra fpdf_save.h y PdfDocument del binding local
+v1.0.35. Se transmite una sola constante a saveAsCopy; no se utiliza OR, el valor
+3 (FPDF_REMOVE_SECURITY), ni conversión a otro modo ante un fallo. Las dos acciones
+PDFium son solo debug, conservan la validación de firmas sin fechas/dibujos y los
+controles de progreso/error existentes. El modo pendiente del permiso de Android 9
+se conserva de forma tipada con rememberSaveable, para no convertir una solicitud
+incremental en FULL al responder al permiso o recrear la Activity. PDFBox conserva
+su acción separada. Se mantienen el Job único del ViewModel y el Mutex compartido.
+
+Cada intento abre su propio descriptor `r` y un PdfDocument nuevo desde el mismo
+URI original. No se reutiliza el documento del visor ni una instancia exportada
+anteriormente. La inserción de PNG completos, matrices, colores, transparencia,
+CropBox, rotaciones, generación por página y rechazo de protegidos/firmas digitales
+son comunes a FULL e INCREMENTAL. El descriptor permanece vivo hasta terminar
+saveAsCopy y cerrar el documento nativo.
+
+PublicPdfDestination reserva un destino nuevo y vacío. El callback reenvía TODOS
+los bloques emitidos por PDFium al mismo PdfSaveOutputStream de 64 KiB. No descarta
+inputBytes, no separa una cola, no copia previamente el original, no utiliza
+transferTo ni append, no reutiliza arrays JNI y no añade caché o compresión.
+El objetivo es una salida autónoma que conserve las páginas originales; solicitar
+el flag y recibir éxito no comprueba por sí solo ese objetivo ni el formato efectivo.
+No se reabre la salida ni se añaden hashes/comparaciones completas durante guardar.
+No se rechaza un resultado por ser mayor o menor que el origen: se mantiene la
+comprobación de bytes escritos positivos y los errores reales del motor/stream.
+
+Se conservan las lecturas completas/EINTR, sincronización global, excepciones JNI,
+cancelación/cierre y descarte de destinos incompletos. Después del cierre se
+publica/registra como antes; un fallo Room conserva la salida publicada y avisa.
+Si falla INCREMENTAL se devuelve el error y se conserva el borrador, sin ejecutar
+silenciosamente otra exportación FULL. El mismo borrador permanece disponible
+después de cada éxito para elegir el siguiente motor/modo.
+
+PdfiumExportTiming conserva todos sus campos e intervalos y añade únicamente
+`requestedSaveMode=full|incremental` y `saveFlags=2|1`, obtenidos del mismo modo
+inmutable utilizado en saveAsCopy. No se registra un supuesto modo efectivo.
+nativeSaveMs contiene las lecturas y callbacks dentro de FPDF_SaveAsCopy;
+nativeWriteCallbackMs incluye callbackMs Kotlin y jniArrayPrepareMs. Parte de
+destWriteMs ya pertenece al callback y otra puede suceder al vaciar el búfer.
+Estos campos siguen anidados y no se suman como costes independientes. Se emite
+una sola línea debug al finalizar, incluido fallo/cancelación cuando sea posible,
+sin nombres, rutas, URI ni contenido privado.
+
+La hipótesis del incremental es evitar parte de la reescritura completa. Producir
+otro archivo autónomo sigue teniendo el coste de emitir una salida que conserve
+el documento original. Los objetos y bytes emitidos dependen del motor y del PDF;
+no se promete que sean solo la imagen o unos KB, ni un tiempo objetivo.
+La medición anterior de FULL no identifica por sí sola el coste interno exacto.
+
+Para comparar, abrir el mismo ORIGINAL, colocar las mismas firmas en las mismas
+posiciones y exportar mediante Guardar/PDFBox, Guardar con PDFium/FULL y Guardar
+con PDFium incremental. Tras cada éxito elegir «Seguir en el visor», sin mover
+ni redimensionar las colocaciones y sin abrir un resultado como nuevo origen.
+Mantener dispositivo, proveedor/destino y condiciones, separar la primera pasada
+de repeticiones y conservar líneas completas de PdfExportTiming/PdfiumExportTiming
+con tamaños, requestedSaveMode, flags, success y failure. Los saveMs históricos
+de PDFBox y PDFium tienen distinto alcance (§25); comparar totalMs y los
+subintervalos documentados, sin deducir velocidad de una sola observación.
+
+El estado de compilación y las comprobaciones pendientes de salida autónoma,
+apertura externa, aspecto de firmas, páginas originales, integridad del original,
+cancelación/fallos, tiempos y tamaños se registran en PDFIUM-INCREMENTAL-001 de
+BACKLOG. Compilar no verifica formato incremental efectivo ni compatibilidad.
 
 ## Fuentes técnicas
 

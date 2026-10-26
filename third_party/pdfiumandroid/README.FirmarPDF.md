@@ -72,9 +72,25 @@ y el APK completo tienen sus comprobaciones registradas en BACKLOG.
   reutilización de buffers JNI. Los intervalos se detallan en arquitectura §25 y
   su verificación en PERF-PDFIUM-002 de BACKLOG.
 
-El exportador de la app llama a `saveAsCopy` con `FPDF_NO_INCREMENTAL` explícito.
-Las API upstream y sus constantes se conservan para compatibilidad del binding;
-el experimento no usa guardado incremental. Los cambios no se publican upstream.
+El exportador de la app conserva FULL como opción predeterminada y transmite
+`FPDF_NO_INCREMENTAL` (2). Por autorización posterior, esta copia añade una acción
+debug INCREMENTAL que transmite únicamente `FPDF_INCREMENTAL` (1), sin OR ni
+FPDF_REMOVE_SECURITY (3). Ambos usan el mismo binding y un documento nuevo por
+intento, abierto desde el URI original de solo lectura. Se entregan todos los
+bloques del callback a un destino nuevo y vacío con búfer de 64 KiB; no hay copia
+previa, descarte de prefijo, extracción de cola ni append sobre el original.
+El modo incremental no reintenta FULL silenciosamente si falla.
+
+Las lecturas completas/EINTR, excepciones, cancelación, cierre y diagnósticos
+nativos conservan su recorrido. requestedSaveMode y saveFlags distinguen la
+solicitud en la línea PdfiumExportTiming; no verifican el formato efectivo ni
+garantizan una salida autónoma solo porque el motor devuelva éxito. El incremental
+puede evitar parte de la reescritura, pero producir otro PDF que conserve el
+documento original sigue teniendo coste y no implica emitir solo la imagen o
+unos KB. Las comprobaciones externas y tiempos quedan en
+PDFIUM-INCREMENTAL-001 de BACKLOG y la decisión en arquitectura §26.
+El proyecto original y LectorDocumentos quedan fuera de esta excepción.
+Los cambios no se publican upstream.
 
 Las decisiones del recorrido están en `docs/ARQUITECTURA_FIRMA_PDF.md` §25 y los
 resultados de compilación, límites y comprobaciones pendientes en `BACKLOG.md`,

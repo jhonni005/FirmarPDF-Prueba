@@ -86,10 +86,12 @@ fun PdfPreviewScreen(
     )
     val saving = exportState is PdfExportUiState.Saving
     val context = LocalContext.current
-    var pdfiumPermission by rememberSaveable { mutableStateOf(false) }
+    // null selects PDFBox; keep the requested PDFium mode across the Android 9 permission dialog.
+    var pendingPdfiumSaveMode by rememberSaveable { mutableStateOf<PdfiumSaveMode?>(null) }
     val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            if (pdfiumPermission) export.savePdfium(draft) else export.save(draft)
+            val saveMode = pendingPdfiumSaveMode
+            if (saveMode != null) export.savePdfium(draft, saveMode) else export.save(draft)
         } else export.permissionDenied()
     }
     var discard by rememberSaveable { mutableStateOf(false) }
@@ -120,7 +122,7 @@ fun PdfPreviewScreen(
         ) {
             Text(stringResource(R.string.preview_title), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = {
-                pdfiumPermission = false
+                pendingPdfiumSaveMode = null
                 if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 } else export.save(draft)
@@ -128,16 +130,21 @@ fun PdfPreviewScreen(
                 Text(stringResource(R.string.pdf_save))
             }
         }
-        if (BuildConfig.DEBUG) TextButton(onClick = {
-            if (export.checkPdfiumDraft(draft)) {
-                pdfiumPermission = true
-                if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                    writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                } else export.savePdfium(draft)
+        if (BuildConfig.DEBUG) for (saveMode in PdfiumSaveMode.entries) {
+            TextButton(onClick = {
+                if (export.checkPdfiumDraft(draft)) {
+                    pendingPdfiumSaveMode = saveMode
+                    if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    } else export.savePdfium(draft, saveMode)
+                }
+            }, enabled = state is PdfPreviewState.Ready && !saving && !signatureDraft.busy && drawingDraft.active == null,
+                modifier = Modifier.align(Alignment.End).padding(horizontal = 12.dp)) {
+                Text(stringResource(when (saveMode) {
+                    PdfiumSaveMode.FULL -> R.string.pdf_save_pdfium
+                    PdfiumSaveMode.INCREMENTAL -> R.string.pdf_save_pdfium_incremental
+                }))
             }
-        }, enabled = state is PdfPreviewState.Ready && !saving && !signatureDraft.busy && drawingDraft.active == null,
-            modifier = Modifier.align(Alignment.End).padding(horizontal = 12.dp)) {
-            Text(stringResource(R.string.pdf_save_pdfium))
         }
         when (state) {
             PdfPreviewState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

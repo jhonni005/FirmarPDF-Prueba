@@ -32,7 +32,7 @@ class PdfExportViewModel(
 
     fun save(draft: PdfExportDraft) {
         if (!draft.hasAnnotations || work?.isCompleted == false) return
-        start(draft, pdfium = false)
+        start(draft, pdfiumSaveMode = null)
     }
 
     fun checkPdfiumDraft(draft: PdfExportDraft): Boolean {
@@ -42,17 +42,19 @@ class PdfExportViewModel(
         return error == null
     }
 
-    fun savePdfium(draft: PdfExportDraft) {
-        if (checkPdfiumDraft(draft)) start(draft, pdfium = true)
+    fun savePdfium(draft: PdfExportDraft, saveMode: PdfiumSaveMode = PdfiumSaveMode.FULL) {
+        if (checkPdfiumDraft(draft)) start(draft, pdfiumSaveMode = saveMode)
     }
 
-    private fun start(draft: PdfExportDraft, pdfium: Boolean) {
+    private fun start(draft: PdfExportDraft, pdfiumSaveMode: PdfiumSaveMode?) {
+        val pdfium = pdfiumSaveMode != null
         state.value = PdfExportUiState.Saving(PdfExportStage.SOURCE, pdfium)
         work = viewModelScope.launch {
             try {
                 val progress: (PdfExportStage) -> Unit = { state.value = PdfExportUiState.Saving(it, pdfium) }
-                val result = if (pdfium) {
-                    (pdfiumExporter ?: throw PdfExportException(PdfExportError.INVALID)).export(source, draft, progress)
+                val result = if (pdfiumSaveMode != null) {
+                    (pdfiumExporter ?: throw PdfExportException(PdfExportError.INVALID))
+                        .export(source, draft, saveMode = pdfiumSaveMode, progress = progress)
                 } else exporter.export(source, draft, progress)
                 lastSaved = draft
                 state.value = PdfExportUiState.Saved(result)
