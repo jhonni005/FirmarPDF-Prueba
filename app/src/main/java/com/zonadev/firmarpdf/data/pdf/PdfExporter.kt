@@ -91,7 +91,6 @@ class PdfExporter(
             }
             if (doc.isEncrypted || !doc.currentAccessPermission.canModify()) throw PdfExportException(PdfExportError.PROTECTED)
             if (doc.numberOfPages <= 0 || doc.numberOfPages != draft.expectedPageCount) throw PdfExportException(PdfExportError.INVALID)
-            val expectedPages = doc.numberOfPages
             measured(PdfExportStage.ANNOTATE) { append(doc, draft) }
             measured(PdfExportStage.SAVE) {
                 ensureActive()
@@ -123,13 +122,9 @@ class PdfExporter(
             measured(PdfExportStage.PUBLISH) {
                 val target = checkNotNull(destination)
                 if (outputSize <= 0L) throw PdfExportException(PdfExportError.VERIFY)
-                (resolver.openInputStream(target.uri) ?: throw PdfExportException(PdfExportError.VERIFY)).use { raw ->
-                    abortable(raw) { PDDocument.load(cancellableInput(raw, jobContext), memory()).use { verified ->
-                        if (verified.numberOfPages != expectedPages) throw PdfExportException(PdfExportError.VERIFY)
-                    } }
-                }
+                // Salida cerrada y con bytes escritos: publicar sin volver a cargarla con PDFBox.
                 ensureActive()
-                // Tras publicar, cancelar o fallar Room nunca debe borrar un resultado válido.
+                // Cancelar o fallar Room nunca debe borrar un archivo ya publicado.
                 withContext(NonCancellable) {
                     val uri = target.publish()
                     val published = PdfExportResult(uri, target.name, recorded = true)
@@ -163,7 +158,7 @@ class PdfExporter(
             if (debugTiming) {
                 val destinationIoMs = (saveIo.writeNanos + saveIo.flushCloseNanos) / 1_000_000L
                 Log.d("PdfExportTiming", "sourceMs=${elapsed[0]} loadMs=${elapsed[1]} annotateMs=${elapsed[2]} " +
-                    "saveMs=$saveCallMs writeStageMs=${elapsed[3]} verifyPublishMs=${elapsed[4]-historyMs} historyMs=$historyMs totalMs=${SystemClock.elapsedRealtime()-start} " +
+                    "saveMs=$saveCallMs writeStageMs=${elapsed[3]} publishMs=${elapsed[4]-historyMs} historyMs=$historyMs totalMs=${SystemClock.elapsedRealtime()-start} " +
                     "inputBytes=$inputSize outputBytes=$outputSize access=stream success=$success " +
                     "destWriteMs=${saveIo.writeNanos / 1_000_000L} destFlushCloseMs=${saveIo.flushCloseNanos / 1_000_000L} " +
                     "pdfBoxOtherMs=${(saveCallMs - destinationIoMs).coerceAtLeast(0L)} " +

@@ -128,14 +128,14 @@
     <string name="pdf_export_load">Leyendo el PDF…</string>
     <string name="pdf_export_annotate">Añadiendo firmas, fechas y dibujos…</string>
     <string name="pdf_export_write">Escribiendo el PDF nuevo…</string>
-    <string name="pdf_export_verify">Comprobando y publicando el resultado…</string>
+    <string name="pdf_export_verify">Publicando el PDF nuevo…</string>
     <string name="pdf_export_source_error">Ya no se puede leer el PDF de origen. Se conserva el borrador; comprueba el acceso y vuelve a intentarlo.</string>
     <string name="pdf_export_protected">Este PDF está protegido o no permite modificaciones. No se creó ningún resultado y el original permanece intacto.</string>
     <string name="pdf_export_certified">Este PDF contiene una firma digital o certificación. No se admite modificarlo en esta versión. El original permanece intacto.</string>
     <string name="pdf_export_invalid">No se pudo procesar el PDF. Puede estar dañado o haber cambiado desde que lo abriste. Se conserva el borrador.</string>
     <string name="pdf_export_annotations_error">No se pudo incorporar alguna firma, fecha o dibujo. Comprueba las firmas guardadas y vuelve a intentarlo. Se conserva el borrador.</string>
     <string name="pdf_export_write_error">No se pudo escribir el PDF nuevo. Comprueba el espacio y el permiso de guardado. Se conserva el borrador.</string>
-    <string name="pdf_export_verify_error">No se pudo comprobar o publicar el PDF nuevo. No se anuncia como guardado. Se conserva el borrador y el original permanece intacto.</string>
+    <string name="pdf_export_verify_error">No se pudo finalizar o publicar el PDF nuevo. No se anuncia como guardado. Se conserva el borrador y el original permanece intacto.</string>
     <string name="pdf_export_busy">Hay otro guardado terminando. Espera un momento y vuelve a intentarlo.</string>
     <string name="pdf_export_memory">No hay memoria suficiente para exportar este PDF. Se conserva el borrador y el original permanece intacto.</string>
     <string name="pdf_export_permission">Android 9 necesita permiso de escritura para guardar en Documents/FirmarPdf. Puedes volver a pulsar Guardar para concederlo. Se conserva el borrador.</string>
