@@ -37,7 +37,7 @@ git -C "$work/runtime" checkout --detach "$revision"
 [[ "$(git -C "$work/runtime" rev-parse HEAD)" == "$revision" ]]
 cat > "$work/.gclient" <<EOF
 solutions = [{"name": "runtime", "url": "https://github.com/embedpdf/runtime.git", "deps_file": "DEPS", "managed": False,
-              "custom_vars": {"checkout_configuration": "minimal", "checkout_android": True, "checkout_android_native_support": True}}]
+              "custom_vars": {"checkout_configuration": "minimal", "checkout_skia": True, "checkout_android": True, "checkout_android_native_support": True}}]
 target_os = ["android"]
 EOF
 cd "$work"
