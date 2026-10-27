@@ -1,0 +1,114 @@
+{
+  "pdfium_source_revision": "a50f1a5953264de698f398fe3a2ef6153677fafa",
+  "source_revision_basis": "ENGINE.json; distribution unchanged",
+  "source_files": {
+    "core/fpdfapi/edit/cpdf_creator.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_creator.cpp",
+      "sha256": "2d58df648dadea0a1754b4c1e68aef5ab0fe0cdb691ffce281888439b4fb63b6"
+    },
+    "core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp",
+      "sha256": "c87ee0d5e55e16c49e956e24501c7b5eead6bf0b11a805ad90d74ff255f87cda"
+    },
+    "core/fpdfapi/edit/cpdf_pagecontentmanager.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_pagecontentmanager.cpp",
+      "sha256": "210f4523c722332ada5ffa1565cdf13d80ddc102ae401c6b1e991ac0172e995f"
+    },
+    "core/fpdfapi/page/cpdf_contentparser.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/page/cpdf_contentparser.cpp",
+      "sha256": "4f40c47b8d51bc3042e758fd6b8e4cd27e00c73ac1ce0ab1665acfb4e1beb484"
+    },
+    "core/fpdfapi/page/cpdf_image.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/page/cpdf_image.cpp",
+      "sha256": "b2745a53e6024838327ab21545d34edfc7406f8ae7b039841a4b199598e8111f"
+    },
+    "core/fpdfapi/page/cpdf_page.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/page/cpdf_page.cpp",
+      "sha256": "4ea398ab6634054b584308efb129ec1571a0b1acf2276317fe7049e670729d44"
+    },
+    "core/fpdfapi/page/cpdf_streamcontentparser.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/page/cpdf_streamcontentparser.cpp",
+      "sha256": "aa74ef58bc984bc1af4e14d0caa37d7e460e81ed9d7ccecbe64fe5ef553cde16"
+    },
+    "core/fpdfapi/parser/cpdf_dictionary.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_dictionary.cpp",
+      "sha256": "a483d6559ae691b80030a6ce6abd91648f71bcb76fe0a6c0ae97053921026ca0"
+    },
+    "core/fpdfapi/parser/cpdf_document.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_document.cpp",
+      "sha256": "5cfe0ed1a3874e1358fd542af8469fb1c1f0fb351266ee75e21b50f31cc60cef"
+    },
+    "core/fpdfapi/parser/cpdf_document.h": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_document.h",
+      "sha256": "34ce221430a13957c63389b35f2f710d59f817d6092c42a88c7c9f3c698f6a2e"
+    },
+    "core/fpdfapi/parser/cpdf_indirect_object_holder.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_indirect_object_holder.cpp",
+      "sha256": "66f7d8fc597d53c7f77a6fa351a72ec46a3a7a4d0b8359022d97f7848262d06e"
+    },
+    "core/fpdfapi/parser/cpdf_indirect_object_holder.h": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_indirect_object_holder.h",
+      "sha256": "2a999381b5349dd49fcafdb5d5f93011951a93b7abb9e353f77ba04c80b3e2b4"
+    },
+    "core/fpdfapi/parser/cpdf_parser.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_parser.cpp",
+      "sha256": "546041dcd9d28c976f5eb8fb82276d2976d823792c15ae1d02bc733a3d7b4659"
+    },
+    "core/fpdfapi/parser/cpdf_reference.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_reference.cpp",
+      "sha256": "2e94121ae710e96f362c527f7d5963f242e724ea2e3cbff44f5b6fc716444ac2"
+    },
+    "core/fpdfapi/parser/cpdf_stream.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_stream.cpp",
+      "sha256": "354326f853f4bfe337a3806ebf37850c7754d28ebc69f0092a6c5c50f554330c"
+    },
+    "core/fpdfapi/parser/object_tree_traversal_util.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/object_tree_traversal_util.cpp",
+      "sha256": "b1bafb04c56fb74f8c0c8a168a614e615a57cdd4471234c29d60e1ef923ac4cd"
+    },
+    "core/fpdfdoc/cpdf_interactiveform.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfdoc/cpdf_interactiveform.cpp",
+      "sha256": "994d4d9a4fd32d520ae2dcc167436d95ac3a494ee76a57de52a1f49f7df328d8"
+    },
+    "fpdfsdk/fpdf_editimg.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/fpdfsdk/fpdf_editimg.cpp",
+      "sha256": "c223e0b449bb36395ab96f4b26cb272e30988d38cae94c68d97ab59ba3e96997"
+    },
+    "fpdfsdk/fpdf_editpage.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/fpdfsdk/fpdf_editpage.cpp",
+      "sha256": "095c0da3f261d9e4f4a0cd900e5b1a83eff79fa14463cae7b815f7cd8e44ee7b"
+    },
+    "fpdfsdk/fpdf_save.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/fpdfsdk/fpdf_save.cpp",
+      "sha256": "c4a358a86edda1e16a2bc6f844cad2ff23db9029c8dfbad4af5211ce973ef84b"
+    },
+    "fpdfsdk/fpdf_signature.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/fpdfsdk/fpdf_signature.cpp",
+      "sha256": "a88838d3220f2675a54fd7e04599864fdff09d66c23b4fba058f39f3f1eab67a"
+    },
+    "fpdfsdk/fpdf_view.cpp": {
+      "url": "https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/fpdfsdk/fpdf_view.cpp",
+      "sha256": "e712f0c64a8a0a25653102fb29d318e2936d2bc2d13aea0ecbb69314229bb14d"
+    }
+  },
+  "source_only": true,
+  "cmake_compiles_these_files": false,
+  "compiled_bridge": "src/main/cpp/pdfiumandroid.cpp includes signature_export.inc; PDFium is an imported prebuilt shared library",
+  "causal_chain": [
+    "FPDFPage_GenerateContent -> CPDF_PageContentGenerator::GenerateContent -> UpdateContentStreams -> CPDF_PageContentManager constructor",
+    "CPDF_PageContentManager unconditionally initializes objects_with_multi_refs_ with GetObjectsWithMultipleReferences(document_) before adding the new signature content stream",
+    "GenerateContent then calls UpdateResourcesDict, which can repeat the same global traversal",
+    "IsPageResourceShared for an indirect resource dictionary -> GetObjectsWithMultipleReferences",
+    "CloneResourcesDictEntries with indirect ExtGState/Font/XObject entries can also call GetObjectsWithMultipleReferences",
+    "ObjectTreeTraverser follows reachable references using GetDirect -> GetOrParseIndirectObjectInternal; caches parsed indirect objects in document",
+    "Closing a page does not evict this document object cache",
+    "InitNewObjNumOffsets includes cached valid objects in incremental; WriteNewObjs serializes them without per-object dirty filtering"
+  ],
+  "scope_limits": [
+    "This proves a source-level amplification mechanism, not the exact object inventory or repeated bytes of the unavailable real PDFs.",
+    "Reachable objects are not necessarily all xref entries; orphan/unreachable objects need not be loaded.",
+    "Stream object materialization does not imply eager decoding of all payload bytes.",
+    "Resource clones preserve indirect references; dictionary cloning alone does not prove image payload duplication.",
+    "Page graphical object counts differ from indirect document object counts."
+  ]
+}

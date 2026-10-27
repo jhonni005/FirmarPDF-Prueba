@@ -1,0 +1,1061 @@
+{
+  "engine_revision": "5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "signature_kind": "synthetic-authorized",
+  "png_sha256": "80179cad51fbf99d00c41a518d4f848ff700e0d6dea170789dece32317d02738",
+  "input_bytes": 198855860,
+  "page": 1,
+  "placement": [
+    0.1,
+    0.1,
+    0.3,
+    0.06628790473878833
+  ],
+  "matrix": [
+    178.58280029296876,
+    0,
+    0,
+    55.807125091552734,
+    59.527600097656254,
+    701.893888092041
+  ],
+  "png_dimensions": [
+    480,
+    150
+  ],
+  "small_control": {
+    "input_bytes": 130629,
+    "runs": [
+      {
+        "mode": "full",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDF_SaveAsCopyEx(FPDF_NO_INCREMENTAL=2)",
+        "outputKind": "complete-pdf",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          600.0,
+          800.0
+        ],
+        "rotation": 0,
+        "matrix": [
+          180.0,
+          0,
+          0,
+          56.25,
+          60.0,
+          663.75
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.0703125
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 9,
+        "saveStatus": 1,
+        "callbackCalls": 5,
+        "callbackBytes": 146681,
+        "totalToPdfMs": 40.1683,
+        "inputBytes": 130629,
+        "outputBytes": 146681,
+        "addedBytes": 16052,
+        "timingsMs": {
+          "openMs": 0.5517,
+          "bitmapMs": 18.3191,
+          "layerTransactionMs": 0.1652,
+          "insertContentMs": 0.805,
+          "saveMs": 19.797,
+          "copyOriginalMs": 0.0,
+          "flushCloseMs": 0.0901,
+          "writeStageMs": 20.2737,
+          "documentCloseMs": 0.1672
+        },
+        "totalMs": 40.4636,
+        "cleanupErrors": [],
+        "file": "initial-full.pdf",
+        "repetition": 0,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 4.029510218463707,
+          "stampActualChangeMae": 101.37482381959126,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": false,
+          "originalXrefLinked": false,
+          "newObjects": 6,
+          "redefinedObjects": 8,
+          "repeatedEncodedPayloadBytes": 129646,
+          "largeOriginalStreamCopies": 1,
+          "largeOriginalStreamBytes": 129646,
+          "finalXref": {
+            "offset": 146235,
+            "kind": "table",
+            "prev": null,
+            "hybrid_xref_stream": null,
+            "entries": 15,
+            "entry_kinds": {
+              "free": 1,
+              "direct": 14
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "selective",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDFLayer_SaveDelta",
+        "outputKind": "base-plus-raw-delta",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          600.0,
+          800.0
+        ],
+        "rotation": 0,
+        "matrix": [
+          180.0,
+          0,
+          0,
+          56.25,
+          60.0,
+          663.75
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.0703125
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 9,
+        "saveStatus": 0,
+        "callbackCalls": 1,
+        "callbackBytes": 16290,
+        "totalToPdfMs": 5.4776,
+        "inputBytes": 130629,
+        "outputBytes": 146919,
+        "addedBytes": 16290,
+        "timingsMs": {
+          "openMs": 0.3197,
+          "bitmapMs": 1.4976,
+          "layerTransactionMs": 0.0812,
+          "insertContentMs": 0.3567,
+          "saveMs": 1.9881,
+          "copyOriginalMs": 0.6143,
+          "flushCloseMs": 0.2242,
+          "writeStageMs": 3.1832,
+          "documentCloseMs": 0.1512
+        },
+        "totalMs": 5.8293,
+        "cleanupErrors": [],
+        "file": "initial-selective.pdf",
+        "repetition": 0,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 4.029510218463707,
+          "stampActualChangeMae": 101.37482381959126,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": true,
+          "originalXrefLinked": true,
+          "newObjects": 6,
+          "redefinedObjects": 2,
+          "repeatedEncodedPayloadBytes": 0,
+          "largeOriginalStreamCopies": 0,
+          "largeOriginalStreamBytes": 0,
+          "finalXref": {
+            "offset": 146597,
+            "kind": "table",
+            "prev": 130383,
+            "hybrid_xref_stream": null,
+            "entries": 8,
+            "entry_kinds": {
+              "direct": 8
+            }
+          }
+        },
+        "verified": true
+      }
+    ],
+    "pairs": [
+      {
+        "repetition": 0,
+        "pageCountOriginal": 2,
+        "signatureRectanglePixels": [
+          120,
+          160,
+          480,
+          273
+        ],
+        "expectedInkPixels": 3784,
+        "baselineVsExpectedMae": 99.78576462297393,
+        "fullSelectiveRenderEqual": true,
+        "passed": true
+      }
+    ],
+    "original_unchanged": true
+  },
+  "large_comparison": {
+    "runs": [
+      {
+        "mode": "full",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDF_SaveAsCopyEx(FPDF_NO_INCREMENTAL=2)",
+        "outputKind": "complete-pdf",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 1,
+        "callbackCalls": 5852,
+        "callbackBytes": 191733234,
+        "totalToPdfMs": 3760.0297,
+        "inputBytes": 198855860,
+        "outputBytes": 191733234,
+        "addedBytes": -7122626,
+        "timingsMs": {
+          "openMs": 0.8693,
+          "bitmapMs": 18.3402,
+          "layerTransactionMs": 0.24,
+          "insertContentMs": 173.6417,
+          "saveMs": 3566.3162,
+          "copyOriginalMs": 0.0,
+          "flushCloseMs": 0.1547,
+          "writeStageMs": 3566.8749,
+          "documentCloseMs": 20.9547
+        },
+        "totalMs": 3781.2015,
+        "cleanupErrors": [],
+        "file": "initial-full.pdf",
+        "repetition": 0,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": false,
+          "originalXrefLinked": false,
+          "newObjects": 4,
+          "redefinedObjects": 2978,
+          "repeatedEncodedPayloadBytes": 11232804,
+          "largeOriginalStreamCopies": 2,
+          "largeOriginalStreamBytes": 1319953,
+          "finalXref": {
+            "offset": 191673249,
+            "kind": "table",
+            "prev": null,
+            "hybrid_xref_stream": null,
+            "entries": 2991,
+            "entry_kinds": {
+              "free": 9,
+              "direct": 2982
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "selective",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDFLayer_SaveDelta",
+        "outputKind": "base-plus-raw-delta",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 0,
+        "callbackCalls": 1,
+        "callbackBytes": 16573,
+        "totalToPdfMs": 386.5709,
+        "inputBytes": 198855860,
+        "outputBytes": 198872433,
+        "addedBytes": 16573,
+        "timingsMs": {
+          "openMs": 0.7537,
+          "bitmapMs": 1.515,
+          "layerTransactionMs": 0.1721,
+          "insertContentMs": 179.996,
+          "saveMs": 3.011,
+          "copyOriginalMs": 200.5221,
+          "flushCloseMs": 0.1234,
+          "writeStageMs": 204.0769,
+          "documentCloseMs": 22.0535
+        },
+        "totalMs": 408.7706,
+        "cleanupErrors": [],
+        "file": "initial-selective.pdf",
+        "repetition": 0,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": true,
+          "originalXrefLinked": true,
+          "newObjects": 4,
+          "redefinedObjects": 1,
+          "repeatedEncodedPayloadBytes": 0,
+          "largeOriginalStreamCopies": 0,
+          "largeOriginalStreamBytes": 0,
+          "finalXref": {
+            "offset": 198872148,
+            "kind": "table",
+            "prev": 198795963,
+            "hybrid_xref_stream": null,
+            "entries": 5,
+            "entry_kinds": {
+              "direct": 5
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "selective",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDFLayer_SaveDelta",
+        "outputKind": "base-plus-raw-delta",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 0,
+        "callbackCalls": 1,
+        "callbackBytes": 16573,
+        "totalToPdfMs": 317.7237,
+        "inputBytes": 198855860,
+        "outputBytes": 198872433,
+        "addedBytes": 16573,
+        "timingsMs": {
+          "openMs": 0.7348,
+          "bitmapMs": 1.3233,
+          "layerTransactionMs": 0.1615,
+          "insertContentMs": 176.4417,
+          "saveMs": 2.7785,
+          "copyOriginalMs": 135.7011,
+          "flushCloseMs": 0.133,
+          "writeStageMs": 139.0146,
+          "documentCloseMs": 21.6501
+        },
+        "totalMs": 339.5154,
+        "cleanupErrors": [],
+        "file": "repeat-1-selective.pdf",
+        "repetition": 1,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": true,
+          "originalXrefLinked": true,
+          "newObjects": 4,
+          "redefinedObjects": 1,
+          "repeatedEncodedPayloadBytes": 0,
+          "largeOriginalStreamCopies": 0,
+          "largeOriginalStreamBytes": 0,
+          "finalXref": {
+            "offset": 198872148,
+            "kind": "table",
+            "prev": 198795963,
+            "hybrid_xref_stream": null,
+            "entries": 5,
+            "entry_kinds": {
+              "direct": 5
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "full",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDF_SaveAsCopyEx(FPDF_NO_INCREMENTAL=2)",
+        "outputKind": "complete-pdf",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 1,
+        "callbackCalls": 5852,
+        "callbackBytes": 191733234,
+        "totalToPdfMs": 6064.185,
+        "inputBytes": 198855860,
+        "outputBytes": 191733234,
+        "addedBytes": -7122626,
+        "timingsMs": {
+          "openMs": 0.6365,
+          "bitmapMs": 1.1793,
+          "layerTransactionMs": 0.1707,
+          "insertContentMs": 177.9844,
+          "saveMs": 5883.6251,
+          "copyOriginalMs": 0.0,
+          "flushCloseMs": 0.1492,
+          "writeStageMs": 5884.1675,
+          "documentCloseMs": 22.6817
+        },
+        "totalMs": 6087.0176,
+        "cleanupErrors": [],
+        "file": "repeat-1-full.pdf",
+        "repetition": 1,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": false,
+          "originalXrefLinked": false,
+          "newObjects": 4,
+          "redefinedObjects": 2978,
+          "repeatedEncodedPayloadBytes": 11232804,
+          "largeOriginalStreamCopies": 2,
+          "largeOriginalStreamBytes": 1319953,
+          "finalXref": {
+            "offset": 191673249,
+            "kind": "table",
+            "prev": null,
+            "hybrid_xref_stream": null,
+            "entries": 2991,
+            "entry_kinds": {
+              "free": 9,
+              "direct": 2982
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "full",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDF_SaveAsCopyEx(FPDF_NO_INCREMENTAL=2)",
+        "outputKind": "complete-pdf",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 1,
+        "callbackCalls": 5852,
+        "callbackBytes": 191733234,
+        "totalToPdfMs": 3714.9696,
+        "inputBytes": 198855860,
+        "outputBytes": 191733234,
+        "addedBytes": -7122626,
+        "timingsMs": {
+          "openMs": 1.0036,
+          "bitmapMs": 1.4456,
+          "layerTransactionMs": 0.161,
+          "insertContentMs": 199.321,
+          "saveMs": 3512.0424,
+          "copyOriginalMs": 0.0,
+          "flushCloseMs": 0.2619,
+          "writeStageMs": 3512.9854,
+          "documentCloseMs": 22.3436
+        },
+        "totalMs": 3737.5018,
+        "cleanupErrors": [],
+        "file": "repeat-2-full.pdf",
+        "repetition": 2,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": false,
+          "originalXrefLinked": false,
+          "newObjects": 4,
+          "redefinedObjects": 2978,
+          "repeatedEncodedPayloadBytes": 11232804,
+          "largeOriginalStreamCopies": 2,
+          "largeOriginalStreamBytes": 1319953,
+          "finalXref": {
+            "offset": 191673249,
+            "kind": "table",
+            "prev": null,
+            "hybrid_xref_stream": null,
+            "entries": 2991,
+            "entry_kinds": {
+              "free": 9,
+              "direct": 2982
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "selective",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDFLayer_SaveDelta",
+        "outputKind": "base-plus-raw-delta",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 0,
+        "callbackCalls": 1,
+        "callbackBytes": 16573,
+        "totalToPdfMs": 352.5995,
+        "inputBytes": 198855860,
+        "outputBytes": 198872433,
+        "addedBytes": 16573,
+        "timingsMs": {
+          "openMs": 0.7442,
+          "bitmapMs": 1.5997,
+          "layerTransactionMs": 0.1776,
+          "insertContentMs": 179.7352,
+          "saveMs": 2.6026,
+          "copyOriginalMs": 167.1975,
+          "flushCloseMs": 0.1189,
+          "writeStageMs": 170.2938,
+          "documentCloseMs": 22.4331
+        },
+        "totalMs": 375.1899,
+        "cleanupErrors": [],
+        "file": "repeat-2-selective.pdf",
+        "repetition": 2,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": true,
+          "originalXrefLinked": true,
+          "newObjects": 4,
+          "redefinedObjects": 1,
+          "repeatedEncodedPayloadBytes": 0,
+          "largeOriginalStreamCopies": 0,
+          "largeOriginalStreamBytes": 0,
+          "finalXref": {
+            "offset": 198872148,
+            "kind": "table",
+            "prev": 198795963,
+            "hybrid_xref_stream": null,
+            "entries": 5,
+            "entry_kinds": {
+              "direct": 5
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "selective",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDFLayer_SaveDelta",
+        "outputKind": "base-plus-raw-delta",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 0,
+        "callbackCalls": 1,
+        "callbackBytes": 16573,
+        "totalToPdfMs": 321.3432,
+        "inputBytes": 198855860,
+        "outputBytes": 198872433,
+        "addedBytes": 16573,
+        "timingsMs": {
+          "openMs": 0.8242,
+          "bitmapMs": 2.0772,
+          "layerTransactionMs": 0.1824,
+          "insertContentMs": 184.8949,
+          "saveMs": 2.6197,
+          "copyOriginalMs": 130.1012,
+          "flushCloseMs": 0.1132,
+          "writeStageMs": 133.3097,
+          "documentCloseMs": 22.4541
+        },
+        "totalMs": 343.9228,
+        "cleanupErrors": [],
+        "file": "repeat-3-selective.pdf",
+        "repetition": 3,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": true,
+          "originalXrefLinked": true,
+          "newObjects": 4,
+          "redefinedObjects": 1,
+          "repeatedEncodedPayloadBytes": 0,
+          "largeOriginalStreamCopies": 0,
+          "largeOriginalStreamBytes": 0,
+          "finalXref": {
+            "offset": 198872148,
+            "kind": "table",
+            "prev": 198795963,
+            "hybrid_xref_stream": null,
+            "entries": 5,
+            "entry_kinds": {
+              "direct": 5
+            }
+          }
+        },
+        "verified": true
+      },
+      {
+        "mode": "full",
+        "success": true,
+        "bufferBytes": 65536,
+        "saveApi": "EPDF_SaveAsCopyEx(FPDF_NO_INCREMENTAL=2)",
+        "outputKind": "complete-pdf",
+        "pageCount": 2,
+        "page": 1,
+        "pageBox": [
+          0.0,
+          0.0,
+          595.2760009765625,
+          841.8900146484375
+        ],
+        "rotation": 0,
+        "matrix": [
+          178.58280029296876,
+          0,
+          0,
+          55.807125091552734,
+          59.527600097656254,
+          701.893888092041
+        ],
+        "placement": [
+          0.1,
+          0.1,
+          0.3,
+          0.06628790473878833
+        ],
+        "pngSize": [
+          480,
+          150
+        ],
+        "promotedObjects": 6,
+        "saveStatus": 1,
+        "callbackCalls": 5852,
+        "callbackBytes": 191733234,
+        "totalToPdfMs": 6066.154,
+        "inputBytes": 198855860,
+        "outputBytes": 191733234,
+        "addedBytes": -7122626,
+        "timingsMs": {
+          "openMs": 0.6402,
+          "bitmapMs": 1.3,
+          "layerTransactionMs": 0.1743,
+          "insertContentMs": 209.6347,
+          "saveMs": 5853.3706,
+          "copyOriginalMs": 0.0,
+          "flushCloseMs": 0.2058,
+          "writeStageMs": 5854.3605,
+          "documentCloseMs": 22.5982
+        },
+        "totalMs": 6088.9314,
+        "cleanupErrors": [],
+        "file": "repeat-3-full.pdf",
+        "repetition": 3,
+        "verification": {
+          "standaloneOpen": true,
+          "pageCount": 2,
+          "signatureVisible": true,
+          "stampExpectedMae": 18.97965223825379,
+          "stampActualChangeMae": 63.82510173880873,
+          "outsideChangedPixels": 0,
+          "outsidePreserved": true,
+          "complete": true,
+          "exactOriginalPrefix": false,
+          "originalXrefLinked": false,
+          "newObjects": 4,
+          "redefinedObjects": 2978,
+          "repeatedEncodedPayloadBytes": 11232804,
+          "largeOriginalStreamCopies": 2,
+          "largeOriginalStreamBytes": 1319953,
+          "finalXref": {
+            "offset": 191673249,
+            "kind": "table",
+            "prev": null,
+            "hybrid_xref_stream": null,
+            "entries": 2991,
+            "entry_kinds": {
+              "free": 9,
+              "direct": 2982
+            }
+          }
+        },
+        "verified": true
+      }
+    ],
+    "pairs": [
+      {
+        "repetition": 0,
+        "pageCountOriginal": 2,
+        "signatureRectanglePixels": [
+          120,
+          170,
+          480,
+          282
+        ],
+        "expectedInkPixels": 3604,
+        "baselineVsExpectedMae": 62.89705882352941,
+        "fullSelectiveRenderEqual": true,
+        "passed": true
+      },
+      {
+        "repetition": 1,
+        "pageCountOriginal": 2,
+        "signatureRectanglePixels": [
+          120,
+          170,
+          480,
+          282
+        ],
+        "expectedInkPixels": 3604,
+        "baselineVsExpectedMae": 62.89705882352941,
+        "fullSelectiveRenderEqual": true,
+        "passed": true
+      },
+      {
+        "repetition": 2,
+        "pageCountOriginal": 2,
+        "signatureRectanglePixels": [
+          120,
+          170,
+          480,
+          282
+        ],
+        "expectedInkPixels": 3604,
+        "baselineVsExpectedMae": 62.89705882352941,
+        "fullSelectiveRenderEqual": true,
+        "passed": true
+      },
+      {
+        "repetition": 3,
+        "pageCountOriginal": 2,
+        "signatureRectanglePixels": [
+          120,
+          170,
+          480,
+          282
+        ],
+        "expectedInkPixels": 3604,
+        "baselineVsExpectedMae": 62.89705882352941,
+        "fullSelectiveRenderEqual": true,
+        "passed": true
+      }
+    ],
+    "medians_ms": {
+      "full": {
+        "totalMs": 6087.0176,
+        "totalToPdfMs": 6064.185,
+        "openMs": 0.6402,
+        "bitmapMs": 1.3,
+        "layerTransactionMs": 0.1707,
+        "insertContentMs": 199.321,
+        "saveMs": 5853.3706,
+        "copyOriginalMs": 0.0,
+        "flushCloseMs": 0.2058,
+        "writeStageMs": 5854.3605,
+        "documentCloseMs": 22.5982
+      },
+      "selective": {
+        "totalMs": 343.9228,
+        "totalToPdfMs": 321.3432,
+        "openMs": 0.7442,
+        "bitmapMs": 1.5997,
+        "layerTransactionMs": 0.1776,
+        "insertContentMs": 179.7352,
+        "saveMs": 2.6197,
+        "copyOriginalMs": 135.7011,
+        "flushCloseMs": 0.1189,
+        "writeStageMs": 139.0146,
+        "documentCloseMs": 22.4331
+      }
+    },
+    "original_unchanged": true,
+    "signature_unchanged": true,
+    "passed": true
+  },
+  "timing_notes": [
+    "perf_counter_ns accumulated, converted to ms at end",
+    "saveMs includes callbacks and buffered writes; it excludes final flush/close",
+    "writeStageMs contains copyOriginalMs, saveMs, flushCloseMs and output setup",
+    "layerTransactionMs accumulates open/begin/security checks plus later commit",
+    "totalToPdfMs ends at final buffer drain and output close; totalMs also closes native resources",
+    "No fsync/FlushFileBuffers: timings end at OS-visible closed file, not guaranteed durable storage",
+    "Hashing, rendering, parsing and validation excluded; runtime DLL/thread startup excluded",
+    "Fresh base/layer/descriptor per attempt; OS disk caches are not purged",
+    "Windows results do not demonstrate Android performance"
+  ],
+  "local_evidence_directories": [
+    "synthetic-small-20261027T024121Z-c2a44375",
+    "real-large-20261027T024223Z-b08aa3a1"
+  ],
+  "verification_limits": [
+    "Only the signed page was rendered, not every page. Both page counts are preserved.",
+    "Rendering used the same native engine through the ordinary standalone FPDF_LoadCustomDocument API; pypdf independently parsed xref and objects. No second rendering engine was used.",
+    "No Android compilation, install, device test or Android ABI compatibility test was performed.",
+    "No failure/cancellation, encrypted/certified input, >4GiB, or production-signature tests were performed.",
+    "FULL has no /Prev; its redefinedObjects comparison means original object numbers serialized in the stand-alone rewrite, not an appended revision."
+  ],
+  "large_selective_objects": [
+    {
+      "object": 5,
+      "generation": 0,
+      "status": "redefined",
+      "type": "Page"
+    },
+    {
+      "object": 2987,
+      "generation": 0,
+      "status": "new",
+      "type": "Image",
+      "encoded_bytes": 6623,
+      "encoded_matches_original_count": 0
+    },
+    {
+      "object": 2988,
+      "generation": 0,
+      "status": "new",
+      "type": "dictionary"
+    },
+    {
+      "object": 2989,
+      "generation": 0,
+      "status": "new",
+      "type": "Image",
+      "encoded_bytes": 8497,
+      "encoded_matches_original_count": 0
+    },
+    {
+      "object": 2990,
+      "generation": 0,
+      "status": "new",
+      "type": "PageContent",
+      "encoded_bytes": 82,
+      "encoded_matches_original_count": 0
+    }
+  ],
+  "large_selective_payload_accounting": {
+    "active_appended_encoded_stream_bytes": 15202,
+    "other_or_superseded_bytes": 1371,
+    "repeated_encoded_payload_bytes": 0,
+    "repeated_decoded_payload_output_encoded_bytes": null
+  }
+}

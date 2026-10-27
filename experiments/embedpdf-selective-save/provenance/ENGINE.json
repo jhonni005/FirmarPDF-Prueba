@@ -1,0 +1,174 @@
+{
+  "repository": "https://github.com/embedpdf/runtime",
+  "release_url": "https://github.com/embedpdf/runtime/releases/tag/runtime-5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "release_id": 423363428,
+  "release_immutable": false,
+  "tag": "runtime-5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "revision": "5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "upstream_revision": "7b3f6f93625e6df97a7d9e677137a558df8648c4",
+  "package_url": "https://github.com/embedpdf/runtime/releases/download/runtime-5f7608ba4a634c94cd718067d6b678a45ba89088/libembedpdf-runtime-win32-x64-5f7608ba4.tar.gz",
+  "package_sha256": "4455b048953c3cc7411a47d2036ec1fb7d2740c6b0c596b9d51b6fdf6049b2d0",
+  "dll_sha256": "dd6c2e9839f0bfbf23e45dae46879ec8eff92d5719bfbe785175c1b245a616df",
+  "binary_machine": "IMAGE_FILE_MACHINE_AMD64 (0x8664)",
+  "imports": [
+    "KERNEL32.dll",
+    "ADVAPI32.dll",
+    "GDI32.dll",
+    "USER32.dll"
+  ],
+  "python": "3.13.3",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "configuration": [
+    "is_debug=false",
+    "treat_warnings_as_errors=false",
+    "pdf_use_skia=false",
+    "pdf_enable_xfa=false",
+    "pdf_enable_v8=false",
+    "is_component_build=false",
+    "clang_use_chrome_plugins=false",
+    "pdf_is_standalone=true",
+    "use_debug_fission=false",
+    "pdf_is_complete_lib=false",
+    "pdf_use_partition_alloc=false",
+    "embedpdf_thread_local_globals=true",
+    "symbol_level=0",
+    "target_os=\"win\"",
+    "target_cpu=\"x64\""
+  ],
+  "headers_sha256": {
+    "fpdfview.h": "2daf138ed357dd10e58a1e58f9100fe45ba25899720260eea75c86dc253e7b7f",
+    "fpdf_save.h": "96a78a3e3eb8a387dc4a35c1e87b430618e9ee8e7ceae9fea424baf1de6b497a",
+    "fpdf_edit.h": "b6050bc6a5505785c28490509b399cbb5c4d3a34dd580004d43f30c52c6e035d",
+    "fpdf_signature.h": "eadfabc91722d1247321d31dab6a94f8284e36717c0019cc38f54b7c51ec826b",
+    "epdf_view.h": "6617dd0e6c34b3d24b5e259de7e0340cee746c0309647982b52de7d7c5068036",
+    "epdf_layer.h": "479b426e02a1239fd873da5abe7762731103de929e11626b552cdc3b2fb62ce7",
+    "epdf_save.h": "ac5610c3c581fab33cab6cf566682bdb4eb1e102d6d32ab2b5094d4332a65a24"
+  },
+  "source_files": {
+    "core/fpdfapi/edit/cpdf_creator.cpp": {
+      "sha256": "bdfd96efb1dbe66c69b3be91280d15a90882b17caa0f2809314ebbf03cdb2a1b",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/core/fpdfapi/edit/cpdf_creator.cpp"
+    },
+    "core/fpdfapi/edit/cpdf_save_object_reader.cpp": {
+      "sha256": "16667930ef3a0e9bcd7e22bb1f544074608674350345d6d81cca97eb90eaed8a",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/core/fpdfapi/edit/cpdf_save_object_reader.cpp"
+    },
+    "core/fpdfapi/parser/cpdf_layer_document.cpp": {
+      "sha256": "49d05248c24922351a892ff7e147f57fd884cf8177d6ee298ff2fe80d29e1bd1",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/core/fpdfapi/parser/cpdf_layer_document.cpp"
+    },
+    "core/fpdfapi/parser/cpdf_layer_document.h": {
+      "sha256": "8a244549c21759443bc3cc0936fdd7281af779c31f41ce1455521893d3b1ad37",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/core/fpdfapi/parser/cpdf_layer_document.h"
+    },
+    "fpdfsdk/epdf_layer.cpp": {
+      "sha256": "74c14c9208a25244b7800987b368043f074def03fc9046be65a3a396a0d93d38",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/fpdfsdk/epdf_layer.cpp"
+    },
+    "fpdfsdk/epdf_save_embeddertest.cpp": {
+      "sha256": "4c5021e8800744c9516f25579813ecd60ad5ae03dc81d0bb1948dbef9972d287",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/fpdfsdk/epdf_save_embeddertest.cpp"
+    },
+    "fpdfsdk/fpdf_save.cpp": {
+      "sha256": "c16f3a2649f3e34dc15163e113851d628112e14a076b929d5b1cc9209724ab54",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/fpdfsdk/fpdf_save.cpp"
+    },
+    "LICENSE": {
+      "sha256": "1fe9dea718fbd75cf149adaf4d8a22a4335604d964ddb76d1b45383dec8668c9",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/LICENSE"
+    },
+    "NOTICE": {
+      "sha256": "1d03c44d3af36ccffe2586e0bb0f8471223b71ce2e38069725d1da7859fc5b5d",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/NOTICE"
+    },
+    "public/epdf_layer.h": {
+      "sha256": "479b426e02a1239fd873da5abe7762731103de929e11626b552cdc3b2fb62ce7",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/epdf_layer.h"
+    },
+    "public/epdf_save.h": {
+      "sha256": "ac5610c3c581fab33cab6cf566682bdb4eb1e102d6d32ab2b5094d4332a65a24",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/epdf_save.h"
+    },
+    "public/fpdf_edit.h": {
+      "sha256": "b6050bc6a5505785c28490509b399cbb5c4d3a34dd580004d43f30c52c6e035d",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/fpdf_edit.h"
+    },
+    "public/fpdfview.h": {
+      "sha256": "2daf138ed357dd10e58a1e58f9100fe45ba25899720260eea75c86dc253e7b7f",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/fpdfview.h"
+    },
+    "testing/tools/benchmark_incremental_save.py": {
+      "sha256": "cefb9712811c5cea63033ed27dbce715ea72215ca7092b3daa11532d5b04decf",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/testing/tools/benchmark_incremental_save.py"
+    },
+    "testing/tools/epdf_layer_memory_benchmark.cpp": {
+      "sha256": "162ba672adf8c90a977539b6d29a42195c00905feecef267d98705c32585c9d6",
+      "url": "https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/testing/tools/epdf_layer_memory_benchmark.cpp"
+    }
+  },
+  "provenance_limits": [
+    "Release is not marked immutable; fixed asset digest is checked against captured GitHub API metadata and the published generated build manifest.",
+    "Tag resolves to the exact source commit and packaged BUILD-METADATA.json matches it; no cryptographic build attestation verified.",
+    "The engine was downloaded unmodified, not compiled or patched."
+  ],
+  "api_contract": {
+    "load": "EPDF_LoadBaseDocument with persistent FPDF_FILEACCESS",
+    "edit": "EPDFLayer_OpenLayer(base,null,null,status), BeginTransaction, ordinary image edit/GenerateContent, CommitTransaction",
+    "full": "EPDF_SaveAsCopyEx(layer,writer,FPDF_NO_INCREMENTAL=2,status)",
+    "selective": "EPDFLayer_SaveDelta(layer,writer,status); raw delta only, absolute offsets start at base length",
+    "materialization": "Copy exact original by blocks to NEW output, then append every raw delta callback byte; no skipped callback bytes, no layer artifact.",
+    "selectivity": "CPDF_Creator::PrepareIncrementalObjects compares candidate effective values against original/loaded twins with CPDF_SameEffectiveValue; filters unchanged and unreachable candidates.",
+    "lifecycle": "EPDF_InitThread/ShutdownThread, no handles cross threads; close layer before releasing base and callback source."
+  },
+  "required_exports_checked": [
+    "EPDF_InitThread",
+    "EPDF_ShutdownThread",
+    "EPDF_LoadBaseDocument",
+    "EPDF_ReleaseBaseDocument",
+    "EPDFLayer_OpenLayer",
+    "EPDFLayer_BeginTransaction",
+    "EPDFLayer_CommitTransaction",
+    "EPDFLayer_AbortTransaction",
+    "EPDFLayer_GetPromotedObjectCount",
+    "EPDFLayer_SaveDelta",
+    "EPDF_SaveAsCopyEx",
+    "FPDF_LoadCustomDocument",
+    "FPDF_CloseDocument",
+    "FPDF_GetLastError",
+    "FPDF_GetPageCount",
+    "FPDF_GetSignatureCount",
+    "FPDF_GetSecurityHandlerRevision",
+    "FPDF_GetDocPermissions",
+    "FPDF_LoadPage",
+    "FPDF_ClosePage",
+    "FPDF_GetPageBoundingBox",
+    "FPDFPage_GetRotation",
+    "FPDF_GetPageWidthF",
+    "FPDF_GetPageHeightF",
+    "FPDFPageObj_NewImageObj",
+    "FPDFImageObj_SetBitmap",
+    "FPDFImageObj_SetMatrix",
+    "FPDFPage_InsertObject",
+    "FPDFPageObj_Destroy",
+    "FPDFPage_GenerateContent",
+    "FPDFBitmap_CreateEx",
+    "FPDFBitmap_Destroy",
+    "FPDFBitmap_GetBuffer",
+    "FPDFBitmap_GetStride",
+    "FPDFBitmap_FillRect",
+    "FPDF_RenderPageBitmap",
+    "FPDF_PageToDevice"
+  ],
+  "ctypes_layout": {
+    "pointer_bits": 64,
+    "unsigned_long_bits": 32,
+    "FileAccess_bytes": 24,
+    "FileAccess_callback_offset": 8,
+    "FileAccess_param_offset": 16,
+    "FileWrite_bytes": 16,
+    "FileWrite_callback_offset": 8,
+    "Rect_bytes": 16,
+    "export_convention": "stdcall WinDLL; Windows x64 unified ABI",
+    "callback_convention": "cdecl CFUNCTYPE, per exact headers"
+  }
+}

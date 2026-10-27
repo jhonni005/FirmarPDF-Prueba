@@ -806,6 +806,238 @@ Referencias de procedencia:
 - Distribución fija: https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium/8111
 - Fuente seleccionada: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_creator.cpp
 
+## 28. Incremental 8111: revisión añadida frente a actualización mínima
+
+Se distingue el formato incremental (original seguido de otra revisión enlazada
+por xref y `/Prev`) de una actualización mínima (solo las definiciones necesarias).
+El flag `FPDF_INCREMENTAL=1` no promete esta segunda propiedad. La igualdad entre
+longitud añadida y un FULL histórico no demuestra identidad de objetos ni de bytes;
+la reproducción y cifras aportadas se registran en PDFIUM-GROWTH-001 de BACKLOG.
+
+La revisión estática usa exclusivamente la fuente resuelta en ENGINE.json,
+`a50f1a5953264de698f398fe3a2ef6153677fafa`. El manifiesto
+`third_party/pdfiumandroid/provenance/chromium-8111/incremental-growth-source-audit.json`
+registra URLs y SHA-256 de los archivos consultados y los límites de la evidencia.
+`engine-creator.cpp` es una evidencia de procedencia: CMake compila el puente
+pdfiumandroid.cpp con signature_export.inc y enlaza el motor precompilado importado;
+editar esa evidencia no altera libpdfium.so.
+
+### Recorrido que carga objetos
+
+| Llamada del exportador/binding | Implementación en la revisión exacta y alcance |
+| --- | --- |
+| nativeOpenDocument | Crea FPDF_FILEACCESS sobre el descriptor original de solo lectura y llama FPDF_LoadCustomDocument → LoadDocumentImpl → CPDF_Document::LoadDoc/CPDF_Parser. TryInit carga raíz y LoadPages. CountPages usa /Count válido o recorre el árbol si falta/es inválido; el parser puede reconstruir xref en entradas defectuosas. Abrir no implica leer/decodificar todo el PDF. |
+| getPageCount, dos consultas | FPDF_GetPageCount → CPDF_Document::GetPageCount devuelve el tamaño de page_list_ ya preparado. No recorre contenido ni reinserta imágenes. No se retira la validación del borrador. |
+| getSignatureExportRestriction | FPDF_GetSignatureCount → CollectSignatures consulta Root/AcroForm/Fields y sus diccionarios de campo. No recorre todas las páginas ni sus streams gráficos. Permisos y revisión del security handler consultan el parser. Se conservan ambos controles. |
+| openPage, solo índices con colocaciones | FPDF_LoadPage obtiene el diccionario, construye CPDF_Page y ParseContent. La página modificada carga contenido/recursos referenciados, incluidas imágenes o formularios XObject preexistentes; no se abre cada página desde Kotlin. La navegación al índice puede cargar nodos/diccionarios previos del árbol de páginas. |
+| getPageBoundingBox/getPageRotation y PdfiumExportGeometry | Consultan bbox/rotación de la página abierta y calculan la matriz. No clonan streams ni abren otras páginas. |
+| insertImage | Crea imagen y Bitmap solo de cada colocación de firma, con los PNG completos de SavedSignatureStore. SetBitmap genera sus streams imagen/máscara; InsertObject marca ese objeto gráfico dirty. Conteo e identidad de objetos gráficos de la página no equivalen al inventario de objetos indirectos del documento. No existe un bucle del exportador que vuelva a insertar imágenes originales. |
+| generateContent, una vez por página modificada | FPDFPage_GenerateContent → CPDF_PageContentGenerator::GenerateContent. GenerateModifiedStreams selecciona streams dirty y UpdateContentStreams construye CPDF_PageContentManager para añadir el del objeto sin stream previo; su constructor recuenta referencias globalmente. Después UpdateResourcesDict examina recursos compartidos de nuevo. No es evidencia de regeneración indiscriminada de todos los contenidos originales. |
+| close de la página | PdfPage.close/FPDF_ClosePage liberan el handle y la vista. No vacían indirect_objs_ del documento. Los objetos cargados pueden seguir incluidos en el guardado después de cerrar la página. |
+| saveAsCopy, una vez | Se conserva PdfiumCore.lock y una llamada JNI a FPDF_SaveAsCopy. El modo incremental copia el original desde CPDF_Creator::WriteDoc_Stage1 mediante parser_->WriteToArchive; después serializa la revisión. Esa copia pertenece al motor/formato, no a una copia manual adicional del exportador. |
+
+### Amplificación identificada dentro del motor
+
+El punto más directo es **UpdateContentStreams → CPDF_PageContentManager**: su
+constructor inicializa incondicionalmente
+`objects_with_multi_refs_(GetObjectsWithMultipleReferences(document_))`, incluso
+para añadir el stream nuevo de una firma. Protege arrays y streams de contenido
+compartidos, pero obtiene el recuento recorriendo el documento. No depende de
+que los recursos de esa página sean indirectos. AddStream conserva el stream
+anterior mediante referencia al formar un array de Contents y añade el nuevo;
+no copia por ese motivo el payload de la imagen original.
+
+Después, UpdateResourcesDict llama IsPageResourceShared. Si el diccionario de recursos
+es indirecto, este llama **GetObjectsWithMultipleReferences(doc)** antes de
+comprobar el recurso concreto. Además, el camino de reserva inspecciona los
+diccionarios de todas las páginas para detectar recursos inline compartidos,
+sin hacer ParseContent de cada una. CloneResourcesDictEntries también puede
+llamar GetObjectsWithMultipleReferences cuando encuentra entradas indirectas
+ExtGState/Font/XObject, incluso si finalmente no necesita clonarlas.
+
+GetObjectsWithMultipleReferences crea ObjectTreeTraverser: parte del trailer o
+raíz, recorre arrays/diccionarios y resuelve referencias normales con GetDirect.
+CPDF_Reference::GetDirectInternal llama GetOrParseIndirectObjectInternal, que
+conserva el objeto parseado en indirect_objs_. El recorrido de un stream visita
+las referencias de su diccionario, no sus píxeles ni sus operadores gráficos.
+Puede materializar objetos indirectos alcanzables de páginas ajenas a la firma,
+incluidos wrappers de streams de imagen, contenido, fuentes y recursos; esto no
+implica decodificar anticipadamente todos sus bytes. No demuestra que entren
+objetos huérfanos o todas las entradas xref del archivo.
+
+InitNewObjNumOffsets itera los objetos indirectos cargados del documento. En modo
+incremental incluye todos los de número válido sin comprobar cambios individuales;
+WriteNewObjs los serializa después. La combinación entre recorrido amplio para
+compartición y selección por carga explica una revisión potencialmente grande,
+aunque solo se añada una firma. Cuáles y cuántos streams grandes se repiten en
+el archivo concreto requiere comparar las dos estructuras, no contarlos como
+objetos gráficos ni inferirlo del tamaño total.
+
+Clonar Resources o sus subdiccionarios es una protección de recursos compartidos.
+CPDF_Dictionary::Clone usa CloneNonCyclic(false) y CPDF_Reference::CloneNonCyclic
+preserva referencias indirectas. Clonar el diccionario no demuestra clonar los
+payloads de todas sus imágenes; la nueva serialización de streams cargados es
+un mecanismo diferente. Los hashes externos permiten separar esas posibilidades.
+
+Se conserva el recorrido actual: no hay una llamada prescindible demostrada del
+binding que evite esa selección interna. La API pública utilizada no ofrece
+evicción del inventario indirecto ni filtrado de objetos modificados para guardar.
+Omitir GenerateContent perdería las modificaciones; omitir controles de seguridad
+o el análisis de compartición no es una corrección válida. No se cambia el motor
+ni se modifica su evidencia de fuente. Una futura corrección del motor debe
+abordar el recorrido y/o el seguimiento de modificaciones con diagnóstico concreto,
+preservando recursos compartidos y persistencia; no basta volver a excluir objetos
+originales indiscriminadamente.
+
+### Inspección externa y comparación
+
+`scripts/analyze_pdf_incremental.py` usa pypdf fijado, xref/trailers y un parser de
+objetos/streams que admite xref streams, híbridos y ObjStm. Compara prefijo exacto
+por bloques, cadena /Prev, números/generaciones nuevos o redefinidos, tipos,
+tamaños y SHA-256 de payloads codificados. Opcionalmente compara datos Flate
+decodificados con predictores y límite, sin equipararlos a píxeles renderizados.
+Ordena los streams que más aportan y agrupa imagen/contenido/fuentes/otros. No
+emite contenido privado y libera las cachés después de cada objeto. Los límites,
+ámbito de revisiones, errores e instalación/comandos están en
+`scripts/README_pdf_diagnostics.md`; no se escanea con regex buscando objetos en
+bytes binarios ni se incorporan estas lecturas al botón Guardar.
+
+Para la comparación se usa el mismo motor 8111, el mismo original y borrador
+(PNG, páginas, posiciones, tamaño y alfa). Ejecutar FULL e INCREMENTAL como
+intentos independientes desde el original, cada uno a un destino nuevo, sin usar
+la salida de otro intento como entrada. Registrar los dos resúmenes actuales,
+comparar tamaños y analizar original/incremental; reabrir los resultados fuera
+del flujo normal para verificar persistencia/aspecto. PDFBox se conserva como
+tercera referencia. El FULL histórico no sustituye esa pareja controlada con 8111.
+sourceReadMs incluye también la lectura del prefijo que copia el motor durante
+save; nativeWriteCallbackMs incluye callback Kotlin y parte de destWriteMs. Ambos
+pertenecen a nativeSaveMs: no se suman como costes adicionales independientes.
+
+Fuentes oficiales, todas bajo la revisión exacta indicada:
+
+- Gestor de contenido, constructor: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_pagecontentmanager.cpp
+- Generación/recursos: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_pagecontentgenerator.cpp
+- Recorrido de referencias: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/object_tree_traversal_util.cpp
+- Resolución/caché: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/parser/cpdf_indirect_object_holder.cpp
+- Creador incremental: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_creator.cpp
+
+## 29. Experimento de escritorio: EmbedPDF y guardado selectivo
+
+`experiments/embedpdf-selective-save` aísla la evaluación nativa Windows x64.
+No participa en Gradle, no cambia app/ ni third_party/pdfiumandroid/, y no implica
+una decisión de migrar el binding Android. El usuario autoriza explícitamente
+un PNG sintético transparente con trazos de firma al no disponer de una firma
+personal; ambos modos usan sus mismos píxeles, página y matriz, con el PDF real
+original de 198855860 bytes. El antecedente aportado del incremental Android
+8111 redefine 2978 objetos y conserva el original como prefijo: es contexto,
+no una comparación de tiempos controlada entre Windows y teléfono.
+
+Se fija la publicación oficial de embedpdf/runtime
+`runtime-5f7608ba4a634c94cd718067d6b678a45ba89088`, revisión
+`5f7608ba4a634c94cd718067d6b678a45ba89088` (upstream
+`7b3f6f93625e6df97a7d9e677137a558df8648c4`). El paquete win32-x64 y su DLL
+están fijados por SHA-256, con headers, licencias, metadata, tag y configuración
+en provenance/ENGINE.json del experimento. Los headers consultados se contrastan
+con la misma revisión. La publicación no está marcada inmutable: el digest fijo
+evita aceptar sustituciones; no se afirma una atestación criptográfica no verificada.
+El PE AMD64 necesita solo KERNEL32/ADVAPI32/GDI32/USER32 según sus importaciones.
+No se compila ni modifica el motor. El adaptador usa ctypes: exports stdcall,
+callbacks C y tipos/layout Windows x64 comprobados, sin estructuras internas.
+
+### Recorrido que se compara
+
+Cada intento abre su propio descriptor de solo lectura, carga base mediante
+EPDF_LoadBaseDocument, abre una capa vacía EPDFLayer_OpenLayer, inicia transacción,
+inserta un Bitmap BGRA con alfa recta, genera contenido y confirma la transacción.
+Se conserva el descriptor/callback hasta liberar el documento base; primero se
+cierra la capa. Como el paquete habilita embedpdf_thread_local_globals, todos los
+handles y operaciones pertenecen al mismo hilo entre EPDF_InitThread y ShutdownThread.
+El callback posicional completa lecturas en un descriptor dedicado con seek/readinto
+bajo lock; nunca se precarga el PDF completo en memoria desde el adaptador.
+
+FULL llama EPDF_SaveAsCopyEx con FPDF_NO_INCREMENTAL=2 sobre esa capa editada y
+produce un PDF independiente. Selectivo llama EPDFLayer_SaveDelta sobre otra
+base/capa independiente. SaveDeltaImpl activa internamente kIncremental y
+kIncrementalAppendOnly: escribe una cola PDF con offsets absolutos desde la
+longitud de la base, sin copiar el prefijo. Su contrato permite materializar
+original + cola. El experimento copia todos los bytes originales a un archivo
+nuevo y añade todos los callbacks de delta, usando búfer de salida de 64 KiB.
+No se descarta ningún byte del callback, no se guarda un artefacto de capa como
+PDF, y no se reutiliza FULL como entrada del selectivo ni existe fallback.
+Esta concatenación responde al contrato explícito de SaveDelta y a la autorización
+del experimento; no altera la política de los exportadores Android existentes.
+
+La selectividad real procede de CPDF_Creator::PrepareIncrementalObjects de esta
+variante: compara candidatos de la vista efectiva con gemelos originales/cargados
+mediante CPDF_SameEffectiveValue (incluida generación), excluye iguales y exige
+alcanzabilidad desde raíces guardadas. CPDF_SaveObjectReader usa caché acotada
+para consultar originales sin convertirlos en modificaciones de la capa. No se
+atribuye ese comportamiento a cambiar solo FPDF_INCREMENTAL en el motor 8111.
+
+El análisis de esta salida real selectiva identifica solo el objeto de página
+`5 0` (primera página) como redefinido, cuatro objetos nuevos (imagen RGB y máscara 480×150, un diccionario
+y contenido de página), sin streams originales reescritos. La cola mide 16573 B;
+sus payloads codificados suman 15202 B y el resto son diccionarios/sintaxis/xref.
+El resultado es un PDF convencional de 198872433 B cuyo prefijo exacto es el
+original y cuyo /Prev enlaza su xref. FULL, de 191733234 B, es una reescritura sin
+/Prev: su conteo de 2978 números originales serializados no describe otra revisión
+incremental. El tamaño FULL menor no contradice que el selectivo escriba menos
+datos nuevos, porque este último conserva todos los bytes originales.
+
+### Medición y alcance de la evidencia
+
+Se acumulan nanosegundos monotónicos por apertura, bitmap, capa/transacción,
+inserción/contenido, copia del original, llamada nativa save, vaciado/cierre y
+liberación de handles. save incluye callbacks/escrituras durante la llamada;
+writeStage contiene copia, save, vaciado/cierre y preparación de salida. TotalToPdf
+incluye materialización completa y cierre de salida; total añade cierre de recursos.
+No se suman intervalos anidados ni se presenta el tiempo de cola como tiempo
+de PDF terminado. No hay fsync/FlushFileBuffers ni promesa de persistencia física.
+Las medianas de tres repeticiones se calculan por columna y no son aditivas.
+
+Fuera del intervalo medido se abren los resultados con el cargador PDF ordinario
+sin capas y se renderiza la página firmada. Se contrasta contribución de color/alfa
+con composición esperada del PNG, preservación fuera de la firma e igualdad
+FULL/selectivo; se comprueban conteo de páginas, hashes de entradas intactas y
+estructura con pypdf. Son comprobaciones distintas del código de éxito de save.
+Se renderiza solo la página firmada, con el mismo motor; no todas las páginas
+ni con un segundo renderer. Las pruebas no cubren errores/cancelación, cifrado,
+certificación, >4 GiB ni comportamiento/rendimiento Android.
+
+La primera pareja válida habilita tres repeticiones por modo. Los datos individuales,
+medianas, tamaños y evidencia técnica están en measurements.json del experimento;
+los PDFs, renders e informes grandes quedan localmente en _local/results, ignorados
+por Git. Resultado y verificaciones pendientes: EMBEDPDF-DESKTOP-001 en BACKLOG.
+No se purgan cachés del SO; los tiempos Windows no prueban una mejora en Android.
+
+### Incremento Android mínimo propuesto, sin implementarlo
+
+1. Obtener primero un runtime EmbedPDF Android verificable para las cuatro ABI,
+   minSdk 28 y alineación 16 KiB aplicable. Esta publicación consultada no incluye
+   Android; no se supone compatible por funcionar su DLL Windows ni se inicia
+   automáticamente una compilación del motor.
+2. Añadir un puente experimental aislado para handles base/capa, transacciones,
+   bitmap/generación y SaveDelta, conservando las rutas actuales. El JNI 8111
+   actual no expone esas APIs y necesita adaptación. Verificar también convivencia
+   de bibliotecas/símbolos y tipos/layout Android, sin trasladar el unsigned long
+   Windows de 32 bits como si fuera igual en todas las ABI.
+3. Ejecutar todas las operaciones y cierres de cada base/capa en un worker dedicado:
+   un lock global no basta para satisfacer el confinamiento de hilo de este runtime.
+   Mantener callbacks/descriptores vivos, comprobar propiedad de imágenes y preservar
+   errores, cancelación, limpieza, original intacto y destino nuevo.
+4. Materializar original + delta según contrato, medir copia y cola por separado y
+   total completo antes de publicación/historial, manteniendo búfer de 64 KiB.
+   Verificar primero PDF pequeño y después este original mediante reapertura/render
+   y análisis externos. No añadir la reapertura al botón Guardar ni retirar
+   PDFBox/FULL/INCREMENTAL durante la evaluación.
+
+Referencias de la misma revisión:
+
+- Capa/transacciones: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/epdf_layer.h
+- Guardado: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/epdf_save.h
+- SaveDeltaImpl: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/fpdfsdk/epdf_layer.cpp
+- Selección: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/core/fpdfapi/edit/cpdf_creator.cpp
+
 ## Fuentes técnicas
 
 - Android, recomendaciones de arquitectura: https://developer.android.com/topic/architecture/recommendations

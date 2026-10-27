@@ -1,0 +1,43 @@
+{
+  "sha": "5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "html_url": "https://github.com/embedpdf/runtime/commit/5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "commit": {
+    "author": {
+      "name": "Bob Singor",
+      "email": "bob@singor.com",
+      "date": "2026-10-25T11:05:12Z"
+    },
+    "committer": {
+      "name": "GitHub",
+      "email": "noreply@github.com",
+      "date": "2026-10-25T11:05:12Z"
+    },
+    "message": "Merge pull request #87 from embedpdf/embedpdf/sync/7b3f6f936\n\nSync S13: merge upstream PDFium up to 7b3f6f936 (Oct 23 2026)",
+    "tree": {
+      "sha": "3d8330e4cb8b4a99add38cd91022c586509eacc9",
+      "url": "https://api.github.com/repos/embedpdf/runtime/git/trees/3d8330e4cb8b4a99add38cd91022c586509eacc9"
+    },
+    "url": "https://api.github.com/repos/embedpdf/runtime/git/commits/5f7608ba4a634c94cd718067d6b678a45ba89088",
+    "comment_count": 0,
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJq3eJoCRC1aQ7uu5UhlAAAVhoQAEpz9wOhdMDGSyaoynMt/Yaf\njUbZThdbzmBj0ze+4vFjsjEQ94SGxro5OiK5HcOs9jM+E6xTXvSypegJ59fXDoxe\nS8s7MD68in7YbzuV8CoemrJZjR3QzGBjIgCah2Xff5RgQLNf0tUw58Ch9kjjwTYg\n3e0U+shOPDOguctizQg3l2WKzCNH+vA4CnSe1wvqOUw0ciGeij2Okn2EFyX/HUX3\n9GbINdReDoKhoza4cvW3na6CA7uii54noV8mT4RCF2UBGbVitqB1A0U24aRDFVTy\nGVHNvkmOPjf/HAv9dFVvzlL2tD7g3tZSTF/QC9v7lGhVOeOzVk9f/Y+K13MZT//n\niyUSxy+gIvcVlSRZbipg9W3It+njpioJFvHZDEYjpzqK+Usbvh3lqxMncKt+ugbF\nhEZvdUYnEqKQ0iGE3xWCX8qI1pQzpORVaZ5VJpnNZ0ptQYn0SdZv2phUDJpOaBhu\nCzQc5Wh2DzSVwUXwk13bbmt3RuI8fRtKA6epqcIBWmiPpqSwFFOa2sIGav+2t9jO\n/r7tO14qBLnnvQOatUFMpPipvwjONbInDDKDOF/aLq6yKJd7OCFDtkmktq44lTio\nq4iwMrPRFmRNENUTltPYqsGOPq0wpiEJ95l++XvZvZcArRf7YIP00jXOX7ZMT45i\n6A2Sbbeo0ozH4MbEVdpY\n=vah1\n-----END PGP SIGNATURE-----\n",
+      "payload": "tree 3d8330e4cb8b4a99add38cd91022c586509eacc9\nparent 490cbff9fdc32a5632c7234d6b6f09a20ceb6181\nparent e9555a072e9b7fe64812c687660d57fbebe80aa5\nauthor Bob Singor <bob@singor.com> 1792926312 +0200\ncommitter GitHub <noreply@github.com> 1792926312 +0200\n\nMerge pull request #87 from embedpdf/embedpdf/sync/7b3f6f936\n\nSync S13: merge upstream PDFium up to 7b3f6f936 (Oct 23 2026)",
+      "verified_at": "2026-10-25T11:05:12Z"
+    }
+  },
+  "parents": [
+    {
+      "sha": "490cbff9fdc32a5632c7234d6b6f09a20ceb6181",
+      "url": "https://api.github.com/repos/embedpdf/runtime/commits/490cbff9fdc32a5632c7234d6b6f09a20ceb6181",
+      "html_url": "https://github.com/embedpdf/runtime/commit/490cbff9fdc32a5632c7234d6b6f09a20ceb6181"
+    },
+    {
+      "sha": "e9555a072e9b7fe64812c687660d57fbebe80aa5",
+      "url": "https://api.github.com/repos/embedpdf/runtime/commits/e9555a072e9b7fe64812c687660d57fbebe80aa5",
+      "html_url": "https://github.com/embedpdf/runtime/commit/e9555a072e9b7fe64812c687660d57fbebe80aa5"
+    }
+  ],
+  "full_api_response_sha256": "8256968c9d26f0d478a65e3e1dbc8f6949e8b82766e46fa9ef2e8602a7bb93ac"
+}

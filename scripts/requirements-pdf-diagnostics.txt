@@ -1,0 +1,2 @@
+# Herramienta externa; no es una dependencia de Android.
+pypdf==6.21.2

@@ -1,0 +1,3 @@
+# Solo para el experimento de escritorio.
+Pillow==12.0.0
+pypdf==6.21.2

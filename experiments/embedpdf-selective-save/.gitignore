@@ -1,0 +1,10 @@
+/_local/
+__pycache__/
+*.pdf
+*.png
+*.bmp
+*.dll
+*.lib
+*.zip
+*.tgz
+*.local.json
