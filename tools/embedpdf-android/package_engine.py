@@ -29,9 +29,16 @@ def main():
         file = candidates[0].parent / name
         if file.exists():
             shutil.copy2(file, lib / name)
+    # New libyuv SME code uses support functions absent from host NDK r26d.
+    # DEPS already downloads this exact Android compiler-rt alongside Clang.
+    builtins = list((src / 'third_party/llvm-build/Release+Asserts').rglob('libclang_rt.builtins-aarch64-android.a'))
+    assert len(builtins) == 1, builtins
+    assert hashlib.sha256(builtins[0].read_bytes()).hexdigest() == '32faf9cae893d732d45799f18040b90c69f847bc408d8207c6f65dd2c2f940e4'
+    shutil.copy2(builtins[0], lib / builtins[0].name)
     shutil.copytree(src / 'public', dest / 'include')
     licenses = dest / 'licenses'
     licenses.mkdir()
+    shutil.copy2(Path(__file__).with_name('COMPILER_RT_LICENSE.txt'), licenses / 'COMPILER_RT_LICENSE.txt')
     for name in ('LICENSE', 'NOTICE'):
         shutil.copy2(src / name, licenses / name)
     for path in (src / 'third_party').rglob('*'):
@@ -50,9 +57,17 @@ def main():
                 'EPDFLayer_BeginTransaction', 'EPDFLayer_CommitTransaction', 'EPDFLayer_SaveDelta',
                 'FPDFPage_InsertObject', 'FPDFPage_GenerateContent']
     assert all(any(line.split()[-1:] == [name] for line in symbols.splitlines()) for name in required)
+    runtime_symbols = subprocess.check_output([str(nm), '--defined-only', str(builtins[0])], text=True, stderr=subprocess.DEVNULL)
+    assert all(any(line.split()[-1:] == [name] for line in runtime_symbols.splitlines()) for name in ('__arm_get_current_vg', '__arm_tpidr2_save'))
     manifest = {'engine_revision': revision, 'abi': 'arm64-v8a', 'min_sdk': 28,
                 'depot_tools_revision': a.depot_revision, 'thread_local_globals': True,
                 'complete_archive': True, 'required_symbols_checked': required,
+                'compiler_runtime_origin': {
+                    'url': 'https://storage.googleapis.com/chromium-browser-clang/Linux_x64/clang-android-runtime-library-llvmorg-24-init-7747-g62397f8b-57.tar.xz?generation=1790797384572756',
+                    'archive_sha256': '9551f7013b0210e4d291bfe09191682796240d93002b4317673c7fc280045e62',
+                    'entry': 'lib/clang/24/lib/linux/libclang_rt.builtins-aarch64-android.a',
+                    'license_source': 'https://raw.githubusercontent.com/llvm/llvm-project/62397f8b3c3986f54187ce08f00b3448ea1f8880/compiler-rt/LICENSE.TXT',
+                    'license_sha256': '1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d'},
                 'run_url': 'https://github.com/' + os.environ.get('GITHUB_REPOSITORY', '') + '/actions/runs/' + os.environ.get('GITHUB_RUN_ID', ''),
                 'compiler': subprocess.check_output([str(nm.parent / 'clang++'), '--version'], text=True),
                 'files': {str(p.relative_to(dest)): hashlib.sha256(p.read_bytes()).hexdigest()
