@@ -1,0 +1,58 @@
+name: EmbedPDF Android ARM64
+
+on:
+  workflow_dispatch:
+  # Scoped bootstrap: a new manual workflow is not discoverable on main yet.
+  # Never runs on main, app changes, PRs, or other branches.
+  push:
+    branches: [codex/embedpdf-arm64-20261026]
+    paths:
+      - .github/workflows/embedpdf-android-arm64.yml
+      - tools/embedpdf-android/build.sh
+      - tools/embedpdf-android/package_engine.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: embedpdf-arm64-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  engine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Inspect resources and reclaim unused hosted-runner SDKs
+        run: |
+          uname -a
+          free -h
+          df -h
+          # Ephemeral GitHub runner only; Android NDK is fetched from pinned DEPS.
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h
+      - name: Build fixed complete PIC archive (2 jobs)
+        env:
+          EMBEDPDF_BUILD_ROOT: ${{ runner.temp }}/embedpdf-arm64
+          EMBEDPDF_PACKAGE: ${{ github.workspace }}/engine-artifact
+          EMBEDPDF_BUILD_JOBS: '2'
+        run: bash tools/embedpdf-android/build.sh
+      - name: Upload engine, headers, licenses, configuration and hashes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: embedpdf-android-arm64-${{ github.run_id }}
+          path: engine-artifact/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+      - name: Upload diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: embedpdf-build-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/embedpdf-arm64/*.log
+            ${{ runner.temp }}/embedpdf-arm64/runtime/out/firmarpdf-arm64/args.gn
+          if-no-files-found: ignore
+          retention-days: 14
