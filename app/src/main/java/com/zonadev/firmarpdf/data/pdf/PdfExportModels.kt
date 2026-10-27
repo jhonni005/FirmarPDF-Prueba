@@ -16,6 +16,6 @@ data class PdfExportDraft(
     val hasAnnotations get() = signatures.isNotEmpty() || dates.isNotEmpty() || strokes.isNotEmpty()
 }
 enum class PdfExportStage { SOURCE, LOAD, ANNOTATE, SAVE, PUBLISH }
-enum class PdfExportError { SOURCE, PROTECTED, CERTIFIED, INVALID, ANNOTATIONS, WRITE, VERIFY, BUSY, MEMORY, PERMISSION, NO_SIGNATURES, PDFIUM_SIGNATURES_ONLY }
+enum class PdfExportError { SOURCE, PROTECTED, CERTIFIED, INVALID, ANNOTATIONS, WRITE, VERIFY, BUSY, MEMORY, PERMISSION, NO_SIGNATURES, PDFIUM_SIGNATURES_ONLY, EMBEDPDF_SIGNATURES_ONLY, EMBEDPDF_UNAVAILABLE }
 class PdfExportException(val reason: PdfExportError) : Exception()
 data class PdfExportResult(val uri: Uri, val displayName: String, val recorded: Boolean)

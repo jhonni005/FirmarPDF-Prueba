@@ -73,3 +73,26 @@ target_link_libraries( # Specifies the target library.
 add_library( libpdfium SHARED IMPORTED )
 
 set_target_properties( libpdfium PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/../../../prebuilt/${ANDROID_ABI}/libpdfium.so)
+
+# Independent static EmbedPDF engine; existing viewer target/binaries stay untouched.
+set(EMBEDPDF_ROOT "${PROJECT_SOURCE_DIR}/../../../../embedpdf")
+set(EMBEDPDF_LIB "${EMBEDPDF_ROOT}/prebuilt/lib/arm64-v8a")
+if(ANDROID_ABI STREQUAL "arm64-v8a" AND EXISTS "${EMBEDPDF_LIB}/libembedpdf_engine.a")
+    add_library(embedpdf_signature SHARED "${EMBEDPDF_ROOT}/jni/embedpdf_signature.cpp")
+    target_include_directories(embedpdf_signature PRIVATE "${EMBEDPDF_ROOT}/include")
+    target_compile_features(embedpdf_signature PRIVATE cxx_std_17)
+    target_compile_options(embedpdf_signature PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+    target_link_options(embedpdf_signature PRIVATE
+        "-Wl,--version-script=${EMBEDPDF_ROOT}/jni/exports.map"
+        "-Wl,--exclude-libs,ALL" "-Wl,-Bsymbolic" "-Wl,--no-undefined"
+        "-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
+    set_property(TARGET embedpdf_signature APPEND PROPERTY LINK_DEPENDS "${EMBEDPDF_ROOT}/jni/exports.map")
+    # Private C++ runtime from the engine's pinned NDK; host stays on NDK r26d.
+    target_link_libraries(embedpdf_signature PRIVATE "-Wl,--start-group"
+        "${EMBEDPDF_LIB}/libembedpdf_engine.a" "${EMBEDPDF_LIB}/libc++_static.a"
+        "${EMBEDPDF_LIB}/libc++abi.a" "-Wl,--end-group"
+        ${android-lib} ${jnigraphics-lib} ${log-lib})
+    if(EXISTS "${EMBEDPDF_LIB}/libunwind.a")
+        target_link_libraries(embedpdf_signature PRIVATE "${EMBEDPDF_LIB}/libunwind.a")
+    endif()
+endif()

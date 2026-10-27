@@ -16,6 +16,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField("boolean", "EMBEDPDF_ENGINE_PRESENT",
+            rootProject.file("third_party/embedpdf/prebuilt/lib/arm64-v8a/libembedpdf_engine.a").isFile.toString())
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

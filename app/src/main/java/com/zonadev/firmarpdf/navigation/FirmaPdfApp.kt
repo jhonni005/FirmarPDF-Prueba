@@ -160,7 +160,7 @@ fun FirmaPdfApp(container: AppContainer, incoming: IncomingPdfViewModel? = null)
                     val exportViewModel: PdfExportViewModel = viewModel(factory = viewModelFactory {
                         initializer {
                             val sourceUri = Uri.parse(checkNotNull(entry.arguments?.getString("documentUri")))
-                            PdfExportViewModel(container.pdfExporter, sourceUri, container.pdfiumSignatureExporter)
+                            PdfExportViewModel(container.pdfExporter, sourceUri, container.pdfiumSignatureExporter, container.embedPdfSignatureExporter)
                         }
                     })
                     PdfPreviewScreen(

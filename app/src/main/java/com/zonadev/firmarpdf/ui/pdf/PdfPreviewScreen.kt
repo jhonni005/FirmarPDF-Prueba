@@ -88,10 +88,12 @@ fun PdfPreviewScreen(
     val context = LocalContext.current
     // null selects PDFBox; keep the requested PDFium mode across the Android 9 permission dialog.
     var pendingPdfiumSaveMode by rememberSaveable { mutableStateOf<PdfiumSaveMode?>(null) }
+    var pendingEmbedPdf by rememberSaveable { mutableStateOf(false) }
     val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             val saveMode = pendingPdfiumSaveMode
-            if (saveMode != null) export.savePdfium(draft, saveMode) else export.save(draft)
+            if (pendingEmbedPdf) export.saveEmbedPdf(draft)
+            else if (saveMode != null) export.savePdfium(draft, saveMode) else export.save(draft)
         } else export.permissionDenied()
     }
     var discard by rememberSaveable { mutableStateOf(false) }
@@ -123,6 +125,7 @@ fun PdfPreviewScreen(
             Text(stringResource(R.string.preview_title), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = {
                 pendingPdfiumSaveMode = null
+                pendingEmbedPdf = false
                 if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 } else export.save(draft)
@@ -133,6 +136,7 @@ fun PdfPreviewScreen(
         if (BuildConfig.DEBUG) for (saveMode in PdfiumSaveMode.entries) {
             TextButton(onClick = {
                 if (export.checkPdfiumDraft(draft)) {
+                    pendingEmbedPdf = false
                     pendingPdfiumSaveMode = saveMode
                     if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                         writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -144,6 +148,20 @@ fun PdfPreviewScreen(
                     PdfiumSaveMode.FULL -> R.string.pdf_save_pdfium
                     PdfiumSaveMode.INCREMENTAL -> R.string.pdf_save_pdfium_incremental
                 }))
+            }
+        }
+        if (export.embedPdfAvailable) {
+            TextButton(onClick = {
+                if (export.checkEmbedPdfDraft(draft)) {
+                    pendingEmbedPdf = true
+                    pendingPdfiumSaveMode = null
+                    if (Build.VERSION.SDK_INT == 28 && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    } else export.saveEmbedPdf(draft)
+                }
+            }, enabled = state is PdfPreviewState.Ready && draft.hasAnnotations && !saving && !signatureDraft.busy && drawingDraft.active == null,
+                modifier = Modifier.align(Alignment.End).padding(horizontal = 12.dp)) {
+                Text(stringResource(R.string.pdf_save_embedpdf_selective))
             }
         }
         when (state) {
@@ -173,8 +191,11 @@ fun PdfPreviewScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator()
                                 val savingState = exportState as PdfExportUiState.Saving
-                                Text(stringResource(if (savingState.pdfium && savingState.stage == PdfExportStage.ANNOTATE)
-                                    R.string.pdfium_export_annotate else exportProgressText(savingState.stage)))
+                                Text(stringResource(when {
+                                    savingState.embedPdf && savingState.stage == PdfExportStage.ANNOTATE -> R.string.embedpdf_export_annotate
+                                    savingState.pdfium && savingState.stage == PdfExportStage.ANNOTATE -> R.string.pdfium_export_annotate
+                                    else -> exportProgressText(savingState.stage)
+                                }))
                                 TextButton(onClick = export::cancel) { Text(stringResource(R.string.cancel)) }
                             }
                         }
@@ -388,6 +409,8 @@ private fun exportProgressText(stage: PdfExportStage) = when (stage) {
 }
 
 private fun exportErrorText(reason: PdfExportError) = when (reason) {
+    PdfExportError.EMBEDPDF_SIGNATURES_ONLY -> R.string.embedpdf_export_signatures_only
+    PdfExportError.EMBEDPDF_UNAVAILABLE -> R.string.embedpdf_export_unavailable
     PdfExportError.NO_SIGNATURES -> R.string.pdfium_export_no_signatures
     PdfExportError.PDFIUM_SIGNATURES_ONLY -> R.string.pdfium_export_signatures_only
     PdfExportError.SOURCE -> R.string.pdf_export_source_error

@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 sealed interface PdfExportUiState {
     data object Idle : PdfExportUiState
-    data class Saving(val stage: PdfExportStage, val pdfium: Boolean = false) : PdfExportUiState
+    data class Saving(val stage: PdfExportStage, val pdfium: Boolean = false, val embedPdf: Boolean = false) : PdfExportUiState
     data class Saved(val result: PdfExportResult) : PdfExportUiState
     data class Error(val reason: PdfExportError) : PdfExportUiState
 }
@@ -22,11 +22,13 @@ class PdfExportViewModel(
     private val exporter: PdfExporter,
     private val source: Uri,
     private val pdfiumExporter: PdfiumSignatureExporter? = null,
+    private val embedPdfExporter: EmbedPdfSignatureExporter? = null,
 ) : ViewModel() {
     private val state = MutableStateFlow<PdfExportUiState>(PdfExportUiState.Idle)
     val uiState = state.asStateFlow()
     private var work: Job? = null
     private var lastSaved: PdfExportDraft? = null
+    val embedPdfAvailable: Boolean get() = BuildConfig.DEBUG && embedPdfExporter?.available == true
 
     fun hasUnsaved(draft: PdfExportDraft) = draft.hasAnnotations && draft != lastSaved
 
@@ -46,13 +48,30 @@ class PdfExportViewModel(
         if (checkPdfiumDraft(draft)) start(draft, pdfiumSaveMode = saveMode)
     }
 
-    private fun start(draft: PdfExportDraft, pdfiumSaveMode: PdfiumSaveMode?) {
+    fun checkEmbedPdfDraft(draft: PdfExportDraft): Boolean {
+        if (!BuildConfig.DEBUG || work?.isCompleted == false) return false
+        val error = when {
+            !embedPdfAvailable -> PdfExportError.EMBEDPDF_UNAVAILABLE
+            draft.dates.isNotEmpty() || draft.strokes.isNotEmpty() -> PdfExportError.EMBEDPDF_SIGNATURES_ONLY
+            else -> pdfiumDraftError(draft)
+        }
+        if (error != null) state.value = PdfExportUiState.Error(error)
+        return error == null
+    }
+
+    fun saveEmbedPdf(draft: PdfExportDraft) {
+        if (checkEmbedPdfDraft(draft)) start(draft, pdfiumSaveMode = null, embedPdf = true)
+    }
+
+    private fun start(draft: PdfExportDraft, pdfiumSaveMode: PdfiumSaveMode?, embedPdf: Boolean = false) {
         val pdfium = pdfiumSaveMode != null
-        state.value = PdfExportUiState.Saving(PdfExportStage.SOURCE, pdfium)
+        state.value = PdfExportUiState.Saving(PdfExportStage.SOURCE, pdfium, embedPdf)
         work = viewModelScope.launch {
             try {
-                val progress: (PdfExportStage) -> Unit = { state.value = PdfExportUiState.Saving(it, pdfium) }
-                val result = if (pdfiumSaveMode != null) {
+                val progress: (PdfExportStage) -> Unit = { state.value = PdfExportUiState.Saving(it, pdfium, embedPdf) }
+                val result = if (embedPdf) {
+                    (embedPdfExporter ?: throw PdfExportException(PdfExportError.EMBEDPDF_UNAVAILABLE)).export(source, draft, progress)
+                } else if (pdfiumSaveMode != null) {
                     (pdfiumExporter ?: throw PdfExportException(PdfExportError.INVALID))
                         .export(source, draft, saveMode = pdfiumSaveMode, progress = progress)
                 } else exporter.export(source, draft, progress)

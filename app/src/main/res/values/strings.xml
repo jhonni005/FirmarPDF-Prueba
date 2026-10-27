@@ -144,4 +144,8 @@
     <string name="pdf_export_busy">Hay otro guardado terminando. Espera un momento y vuelve a intentarlo.</string>
     <string name="pdf_export_memory">No hay memoria suficiente para exportar este PDF. Se conserva el borrador y el original permanece intacto.</string>
     <string name="pdf_export_permission">Android 9 necesita permiso de escritura para guardar en Documents/FirmarPdf. Puedes volver a pulsar Guardar para concederlo. Se conserva el borrador.</string>
+    <string name="pdf_save_embedpdf_selective">Guardar selectivo (EmbedPDF)</string>
+    <string name="embedpdf_export_annotate">Preparando las firmas para el guardado selectivo…</string>
+    <string name="embedpdf_export_signatures_only">El guardado selectivo todavía no admite fechas ni dibujos. Quítalos del borrador o usa Guardar.</string>
+    <string name="embedpdf_export_unavailable">El guardado selectivo no está disponible en este proceso o falta su motor ARM64. Puedes usar los otros métodos de guardado.</string>
 </resources>

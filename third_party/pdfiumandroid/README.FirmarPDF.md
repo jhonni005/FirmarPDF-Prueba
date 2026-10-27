@@ -174,3 +174,19 @@ Desde la raíz, `python scripts/verify_pdfium_apk.py` comprueba los hashes de lo
 precompilados y que cada motor empaquetado coincida byte a byte con ellos,
 entradas nativas únicas/ABI, segmentos ELF y offsets ZIP del APK
 debug generado. Es una inspección estática, sin cargar bibliotecas ni instalar.
+
+## Motor selectivo independiente (Android ARM64)
+
+El CMake de este módulo también puede construir `libembedpdf_signature.so`, con
+el archivo estático importado en `../embedpdf/prebuilt`. No sustituye ni enlaza
+los cuatro libpdfium.so anteriores. Su entrada JNI propia incorpora EmbedPDF
+5f7608ba4a634c94cd718067d6b678a45ba89088 y oculta todos los símbolos del motor y
+del runtime C++; no comparte handles con este binding. La receta Actions,
+procedencia, headers/licencias y contrato JNI están en
+`../../tools/embedpdf-android/README.md`; la decisión de salida original+delta
+se documenta en arquitectura §30 y el estado en BACKLOG `EMBEDPDF-ANDROID-001`.
+
+`python scripts/verify_pdfium_apk.py --require-embedpdf` exige además el nuevo
+puente solo en ARM64, una única exportación JNI, ningún import FPDF/EPDF,
+dependencias de plataforma/API 28, PIC y alineación 16 KiB. No comprueba que la
+firma sea visible al abrir el PDF en un teléfono.

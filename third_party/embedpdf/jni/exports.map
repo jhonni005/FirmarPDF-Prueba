@@ -1,0 +1,4 @@
+{
+  global: Java_com_zonadev_firmarpdf_data_pdf_EmbedPdfNativeBridge_nativeExport;
+  local: *;
+};

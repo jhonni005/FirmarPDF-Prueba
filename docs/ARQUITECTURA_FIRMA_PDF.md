@@ -2,6 +2,8 @@
 
 Política vigente: Guardar crea siempre un PDF NUEVO en Documents/FirmarPdf para cualquier origen. Se mantienen Room v2 y sus datos. La finalización actual (§23) conserva cierre/salida no vacía/publicación/registro, sin segunda carga PDFBox ni comparación de páginas del resultado. Las secciones históricas conservan decisiones y pruebas anteriores, sin habilitar modificación del original. Esta copia `FirmarPDF - PdfiumPrueba` usa el identificador y la configuración sin Firebase descritos en §24; las referencias históricas a su integración no se aplican a esta copia. §25 incorpora el binding local y el modo PDFium completo junto a Guardar/PDFBox. Por autorización explícita posterior, §26 añade únicamente a esta copia un modo PDFium incremental experimental, siempre hacia otro PDF. Las prohibiciones anteriores de incremental se mantienen como alcance histórico; la excepción actual no habilita sobrescribir originales ni usar saveIncremental de PDFBox.
 
+La autorización posterior para Android añade el recorrido selectivo independiente de §30: original exacto seguido de la cola de `EPDFLayer_SaveDelta`, siempre en un destino nuevo. No cambia las políticas de PDFBox ni de los modos PDFium anteriores.
+
 ## 1. Objetivo y límites
 
 Abrir un PDF, dibujar o reutilizar una firma manuscrita, colocarla en una o varias páginas, guardar el resultado y compartirlo. El trabajo con el PDF funciona sin conexión. La versión básica ofrecerá varias firmas manuscritas guardadas y exportaciones ilimitadas, sin anuncios, suscripciones ni pagos en el MVP. Una posible compra única futura añadiría otras comodidades sin bloquear la firma ni la salida básica. No habrá cuentas, OCR, Office, compresión, nube propia ni firma criptográfica.
@@ -1037,6 +1039,88 @@ Referencias de la misma revisión:
 - Guardado: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/public/epdf_save.h
 - SaveDeltaImpl: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/fpdfsdk/epdf_layer.cpp
 - Selección: https://github.com/embedpdf/runtime/blob/5f7608ba4a634c94cd718067d6b678a45ba89088/core/fpdfapi/edit/cpdf_creator.cpp
+
+## 30. Exportador Android selectivo EmbedPDF, separado del visor
+
+Por autorización posterior se adapta el recorrido de §29 a Android ARM64, con
+la misma revisión `5f7608ba4a634c94cd718067d6b678a45ba89088`. Las cuatro
+bibliotecas del visor y los recorridos PDFBox/PDFium FULL/INCREMENTAL se conservan.
+Las comprobaciones y su estado real se registran en `EMBEDPDF-ANDROID-001` del
+BACKLOG; la evidencia Windows no demuestra funcionamiento ni rendimiento Android.
+
+### Construcción y aislamiento
+
+Se usa el runner Ubuntu 24.04 de GitHub Actions en el repositorio experimental
+autorizado, sin instalar WSL/Docker. La receta fija runtime, depot_tools y DEPS,
+con Ninja -j2, Android API 28, archivo completo no-thin, sin V8/XFA/renderer Skia,
+y `embedpdf_thread_local_globals=true`. El fork requiere descargar Skia de DEPS
+para redaction_pathops incluso con renderer desactivado. No se parchea el algoritmo.
+El parche GN de la receta corrige el ámbito de configs del invocador skia_opts
+y condiciona el objetivo del renderer completo a pdf_use_skia para evitar su
+dependencia Expat ausente del DEPS; conserva el objetivo de geometría y las
+opciones de optimización que ya aplica su plantilla. El diff acompaña al paquete.
+La configuración efectiva, revisiones, headers, licencias, compilador y hashes
+acompañan al artefacto. El toolchain NDK fijado por DEPS para el motor se distingue
+del NDK r26d que conserva el anfitrión Android. Receta: `tools/embedpdf-android/README.md`.
+
+El CMake del binding existente añade `libembedpdf_signature.so` exclusivamente en
+arm64-v8a cuando está presente el archivo estático importado. Enlaza motor y runtime
+C++ de forma privada, con version script, `--exclude-libs=ALL` y `-Bsymbolic`.
+Solo se exporta la entrada JNI; no debe importar/exportar símbolos FPDF/EPDF ni
+depender del PDFium del visor. No se intercambian documentos, páginas, bitmaps ni
+punteros entre motores. La auditoría estática exige estas propiedades, imports
+resolubles en API 28, ausencia de TEXTREL y alineación ELF/ZIP de 16 KiB.
+
+### Ciclo de vida y salida
+
+Un ejecutor de un único hilo físico ejecuta una operación JNI síncrona completa:
+InitThread → base → capa vacía → begin → firmas/contenido por página → commit →
+copia del original → SaveDelta → cierre → ShutdownThread. Las cargas suspendidas
+de PNG completos desde SavedSignatureStore ocurren antes de crear handles.
+La geometría usa PdfiumExportGeometry y la conversión RGBA/BGRA existente, con
+stride y alfa recta. Fechas/dibujos se rechazan antes de crear destino.
+
+El descriptor de origen permanece vivo hasta después del cierre nativo. La lectura
+posicional completa peticiones mediante pread64, reintenta EINTR y detecta EOF y
+rangos inválidos. No altera la posición compartida ni precarga el documento completo.
+La propiedad de FPDFPage_InsertObject se respeta también cuando devuelve fallo.
+
+Solo después de commit se crea PublicPdfDestination. Se copian los bytes originales
+exactos y se añade íntegramente SaveDelta al MISMO PdfSaveOutputStream de 64 KiB.
+La cola contiene offsets relativos a la longitud de la base; no constituye un PDF
+independiente. No se usa SaveLayerArtifact, descarte de callbacks, fallback ni
+reapertura del resultado en Guardar. Antes de publicar se exigen cierre correcto,
+copiedOriginalBytes=inputBytes, deltaBytes>0 y outputBytes=inputBytes+deltaBytes.
+Esta materialización siempre crea otro PDF; jamás modifica el original.
+
+Las excepciones JNI se conservan mientras se liberan recursos y se relanzan tras
+ShutdownThread. Se destruye el objeto pendiente, se cierra la página, se aborta
+la transacción incompleta y se cierra capa antes de liberar base. La cancelación
+se comprueba entre lecturas/escrituras y filas de bitmap; no cierra handles ni
+descriptores desde otro hilo. No promete interrupción inmediata de llamadas sin
+puntos de comprobación. El destino no publicado se elimina al fallar/cancelar;
+una salida ya publicada no se borra. Se comparte el mutex con los otros exportadores.
+
+AppContainer y ViewModel conectan el botón debug `Guardar selectivo (EmbedPDF)` a
+permisos, progreso y resultados existentes. Se oculta sin artefacto o fuera de un
+proceso ARM64. La biblioteca solo se carga al usar el exportador, nunca al iniciar.
+
+### Diagnóstico
+
+Una línea debug `EmbedPdfExportTiming` acumula nanosegundos monotónicos y los
+convierte al final a ms, incluidos fallos/cancelaciones que alcanzan el worker.
+openMs mide metadatos/descriptor e InitThread/apertura de base, sin afirmar lectura
+completa. imagesMs incluye PNG y preparación nativa BGRA/SetBitmap. layerTransactionMs
+incluye apertura/controles/begin/commit; insertContentMs agrupa página, geometría,
+inserción y generación, excluyendo preparación de imágenes. copyOriginalMs incluye
+lecturas y callbacks de copia; deltaSaveMs incluye SaveDelta y sus callbacks.
+flushCloseMs mide el vaciado restante/cierre, sin fsync. nativeCloseMs mide limpieza
+de handles/ShutdownThread; publishMs/historyMs miden publicación/registro.
+totalMs incluye todo el recorrido, espera del worker, carga inicial de biblioteca,
+destino y limpieza. No se suman intervalos anidados ni se presenta deltaSaveMs como
+el tiempo del PDF completo. Los cuatro contadores de bytes se contrastan antes
+de publicar; en fallos pueden diferir por bytes aún en el búfer. El resumen solo
+incluye categorías técnicas, nunca nombres, rutas, URI ni contenido.
 
 ## Fuentes técnicas
 
