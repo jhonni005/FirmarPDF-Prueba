@@ -1,0 +1,22 @@
+{
+  "application_id": "com.zonadev.firmarpdf.pdfiumtest",
+  "apk_sha256": "909a10823434b3b95307fcac2a458bd1439c7abf4238eeb8a18054767ec9f1df",
+  "entries": {
+    "lib/arm64-v8a/libpdfium.so": {
+      "sha256": "6cb23729fd58916729bfb7cebe9d7e44b8090b6c242be67261023865dc21f8e2",
+      "bytes": 6598792
+    },
+    "lib/armeabi-v7a/libpdfium.so": {
+      "sha256": "37ae11ec1fec39e4181e8f4a838beaee5ca5b4040c70ed65eed9657778f0710d",
+      "bytes": 4324224
+    },
+    "lib/x86/libpdfium.so": {
+      "sha256": "6afb4d6eafbea7336e083a8a748fe7e8b5d37359c8ace865c5dc49364d5f13e0",
+      "bytes": 6301160
+    },
+    "lib/x86_64/libpdfium.so": {
+      "sha256": "4c9127ad3886fc593572a869f5989b1a22103ab7a523326f2b107429d84e856a",
+      "bytes": 6887744
+    }
+  }
+}

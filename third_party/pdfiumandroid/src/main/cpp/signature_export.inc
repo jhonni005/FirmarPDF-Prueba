@@ -127,8 +127,10 @@ Java_io_legere_pdfiumandroid_PdfPage_nativeInsertImage(
         const int before = FPDFPage_CountObjects(page);
         if (before < 0) throw std::runtime_error("Cannot inspect page objects");
         const auto inserted = image.value;
-        FPDFPage_InsertObject(page, inserted); // v1.0.35 header: void, with ownership transfer.
-        image.value = nullptr; // The page now owns the image, including on later failure.
+        // Engine chromium/8111: boolean result; takes ownership and frees the object on failure.
+        const auto insertedSuccessfully = FPDFPage_InsertObject(page, inserted);
+        image.value = nullptr; // Never destroy again: owned by the page on success, freed on failure.
+        if (!insertedSuccessfully) throw std::runtime_error("Signature image insertion failed");
         if (FPDFPage_CountObjects(page) != before + 1 || FPDFPage_GetObject(page, before) != inserted)
             throw std::runtime_error("Signature image insertion failed");
     } catch (const std::bad_alloc&) {

@@ -1,0 +1,29 @@
+{
+  "commit": "a50f1a5953264de698f398fe3a2ef6153677fafa",
+  "tree": "8ee5f73ed9db0ece58811f33d90af31ee3995f1d",
+  "parents": [
+    "067393bda2d8be2e9528428baeacc9c97cd49c17"
+  ],
+  "author": {
+    "name": "Lei Zhang",
+    "email": "thestig@chromium.org",
+    "time": "Fri Oct 16 17:13:47 2026 -0700"
+  },
+  "committer": {
+    "name": "pdfium-scoped@luci-project-accounts.iam.gserviceaccount.com",
+    "email": "pdfium-scoped@luci-project-accounts.iam.gserviceaccount.com",
+    "time": "Fri Oct 16 17:13:47 2026 -0700"
+  },
+  "message": "Fix UNSAFE_TODO() in AlternateDateTimeSymbols()\n\nConvert `kAltTableDate` and `kAltTableTime` to std::arrays. Then\naccessing them is safe because operator[] is hardened to do bounds\nchecking.\n\nChange-Id: I0a71c6d7b7f081665bd21306ac5f288085e99c2e\nReviewed-on: https://pdfium-review.googlesource.com/c/pdfium/+/161190\nCommit-Queue: Lei Zhang <thestig@chromium.org>\nReviewed-by: Andy Phan <andyphan@chromium.org>\n",
+  "tree_diff": [
+    {
+      "type": "modify",
+      "old_id": "c9897a837a53dbd0a5daeed4e02dba102543f4b9",
+      "old_mode": 33188,
+      "old_path": "fxjs/xfa/cfxjse_formcalc_context.cpp",
+      "new_id": "b0e6a4ec52700a751eacdf2b9d86e22fb2e3b60b",
+      "new_mode": 33188,
+      "new_path": "fxjs/xfa/cfxjse_formcalc_context.cpp"
+    }
+  ]
+}

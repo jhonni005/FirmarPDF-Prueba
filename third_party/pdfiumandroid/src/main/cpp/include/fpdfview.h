@@ -26,12 +26,6 @@
 #include <windows.h>
 #endif
 
-#ifdef PDF_ENABLE_XFA
-// PDF_USE_XFA is set in confirmation that this version of PDFium can support
-// XFA forms as requested by the PDF_ENABLE_XFA setting.
-#define PDF_USE_XFA
-#endif  // PDF_ENABLE_XFA
-
 // PDF object types
 #define FPDF_OBJECT_UNKNOWN 0
 #define FPDF_OBJECT_BOOLEAN 1
@@ -203,9 +197,6 @@ typedef int FPDF_ANNOT_APPEARANCEMODE;
 // Dictionary value types.
 typedef int FPDF_OBJECT_TYPE;
 
-#if defined(COMPONENT_BUILD)
-// FPDF_EXPORT should be consistent with |export| in the pdfium_fuzzer
-// template in testing/fuzzers/BUILD.gn.
 #if defined(WIN32)
 #if defined(FPDF_IMPLEMENTATION)
 #define FPDF_EXPORT __declspec(dllexport)
@@ -219,9 +210,6 @@ typedef int FPDF_OBJECT_TYPE;
 #define FPDF_EXPORT
 #endif  // defined(FPDF_IMPLEMENTATION)
 #endif  // defined(WIN32)
-#else
-#define FPDF_EXPORT
-#endif  // defined(COMPONENT_BUILD)
 
 #if defined(WIN32) && defined(FPDFSDK_EXPORTS)
 #define FPDF_CALLCONV __stdcall
@@ -242,6 +230,15 @@ typedef enum {
   // Skia - https://skia.org/
   FPDF_RENDERERTYPE_SKIA = 1,
 } FPDF_RENDERER_TYPE;
+
+// PDF font library types - Experimental.
+// Selection of font backend library to use.
+typedef enum {
+  // FreeType - https://freetype.org/
+  FPDF_FONTBACKENDTYPE_FREETYPE = 0,
+  // Fontations - https://github.com/googlefonts/fontations/
+  FPDF_FONTBACKENDTYPE_FONTATIONS = 1,
+} FPDF_FONT_BACKEND_TYPE;
 
 // Process-wide options for initializing the library.
 typedef struct FPDF_LIBRARY_CONFIG_ {
@@ -273,13 +270,38 @@ typedef struct FPDF_LIBRARY_CONFIG_ {
 
   // Version 4 - Experimental.
 
-  // Explicit specification of core renderer to use. |m_RendererType| must be
-  // a valid value for |FPDF_LIBRARY_CONFIG| versions of this level or higher,
-  // or else the initialization will fail with an immediate crash.
+  // Explicit specification of 2D graphics rendering library to use.
+  // |m_RendererType| must be a valid value for |FPDF_LIBRARY_CONFIG| versions
+  // of this level or higher, or else the initialization will fail with an
+  // immediate crash.
   // Note that use of a specified |FPDF_RENDERER_TYPE| value for which the
-  // corresponding render library is not included in the build will similarly
-  // fail with an immediate crash.
+  // corresponding 2D graphics rendering library is not included in the build
+  // will similarly fail with an immediate crash.
   FPDF_RENDERER_TYPE m_RendererType;
+
+  // Version 5 - Experimental.
+
+  // Explicit specification of font library to use.
+  // |m_FontLibraryType| must be a valid value for |FPDF_LIBRARY_CONFIG|
+  // versions of this level or higher, or else the initialization will fail with
+  // an immediate crash.
+  // Note that use of a specified |FPDF_FONT_BACKEND_TYPE| value for which the
+  // corresponding font library is not included in the build will similarly fail
+  // with an immediate crash.
+  FPDF_FONT_BACKEND_TYPE m_FontLibraryType;
+
+  // Version 6 - Experimental.
+
+  // Boolean to specify whether the experimental PDF 2.0 /BrotliDecode filter
+  // is enabled. For setting the bool to true to have an effect, PDFium must be
+  // built with |PDF_ENABLE_BROTLI|.
+  FPDF_BOOL m_BrotliEnabled;
+
+  // Version 7 - Experimental.
+
+  // Boolean to specify whether PDFium creates a dedicated v8::Isolate for each
+  // document. When true, |m_pIsolate| must be NULL.
+  FPDF_BOOL m_IsolatePerDocument;
 } FPDF_LIBRARY_CONFIG;
 
 // Function: FPDF_InitLibraryWithConfig
@@ -1088,6 +1110,7 @@ FPDF_EXPORT FPDF_BITMAP FPDF_CALLCONV FPDFBitmap_Create(int width,
 
 // More DIB formats
 // Unknown or unsupported format.
+// All of the colors are listed in order of LSB to MSB.
 #define FPDFBitmap_Unknown 0
 // Gray scale bitmap, one byte per pixel.
 #define FPDFBitmap_Gray 1

@@ -10,7 +10,7 @@ Abrir un PDF, dibujar o reutilizar una firma manuscrita, colocarla en una o vari
 
 - `namespace` y paquetes Kotlin: `com.zonadev.firmarpdf`; `applicationId` de esta copia: `com.zonadev.firmarpdf.pdfiumtest`; `minSdk 28`, `compileSdk 36`, `targetSdk 36`.
 - Kotlin `2.2.0`, AGP `8.9.2`, Java/JVM `11`, Compose BOM `2024.09.00`. Kotlin se cambia por petición explícita para resolver BUILD-001; las demás versiones se conservan.
-- Binding PDFium `v1.0.35` incorporado localmente en `:pdfium-local` (§25) para visualizar y para el exportador experimental de firmas; sustituye al AAR `io.legere:pdfiumandroid:1.0.35`. PDFBox Android `2.0.27.0` conserva el botón Guardar y todas sus herramientas. Inicializar `PDFBoxResourceLoader` con el contexto de aplicación antes de usar PDFBox.
+- Binding PDFium `v1.0.35` incorporado localmente en `:pdfium-local` (§25), con motor PDFium `158.0.8111.0` de procedencia fijada (§27) para visualizar y exportar; sustituye al AAR `io.legere:pdfiumandroid:1.0.35` sin migrar el binding. PDFBox Android `2.0.27.0` conserva el botón Guardar y todas sus herramientas. Inicializar `PDFBoxResourceLoader` con el contexto de aplicación antes de usar PDFBox.
 - Base incorporada: Lifecycle Compose `2.9.4`, Navigation Compose `2.8.0`, Room `2.8.2` + KSP `2.2.0-2.0.2` con KSP2. Esta copia excluye Firebase, Google Services y Crashlytics (§24). PDFium y PDFBox se centralizan en el catálogo sin cambiar sus versiones. DataStore queda pendiente del consentimiento persistente; no se añade una dependencia sin uso. Evitar Paging, Hilt, Koin y más módulos hasta que un problema concreto los justifique.
 - Confirmar compatibilidad de todo el paquete nativo con páginas de 16 KB en el APK/AAB y con un emulador de 16 KB. No equivale a mirar únicamente la dependencia de PDFium.
 
@@ -402,7 +402,10 @@ Procede de PdfiumAndroidKt, etiqueta `v1.0.35`, revisión
 `2052da7c071002446f1e2dff082b373a17ebadd0`. Se conservan fuentes principales,
 headers, licencias y avisos, sin aplicación de ejemplo ni módulos Arrow/publicación.
 `README.FirmarPDF.md` documenta origen y modificaciones; `prebuilt/SHA256SUMS.txt`
-identifica los cuatro `libpdfium.so` originales. La dependencia Maven se sustituye
+identifica los cuatro `libpdfium.so` vigentes. Los originales de la etiqueta se
+sustituyen por el motor corregido de §27, junto con sus headers públicos/licencias;
+se conserva la procedencia del binding y los auxiliares Android include/utils.
+La dependencia Maven se sustituye
 por el proyecto local: una sola definición de clases y un solo puente compilado.
 
 El anfitrión mantiene AGP 8.9.2, Kotlin 2.2.0, Gradle 8.11.1 y Java/JVM 11,
@@ -432,9 +435,11 @@ unlock mediante RAII; nunca se libera memoria Android ni se utiliza tras unlock.
 
 Se crean bitmap y objeto imagen, se asigna con FPDFImageObj_SetBitmap y se fija
 la matriz completa con FPDFImageObj_SetMatrix. La matriz transforma la imagen
-unitaria, no sus dimensiones en píxeles. FPDFPage_InsertObject devuelve void en
-estos headers; se comprueban conteo/identidad tras insertar y se transfiere la
-propiedad del objeto a la página. Los recursos propios se liberan con RAII;
+unitaria, no sus dimensiones en píxeles. FPDFPage_InsertObject devolvía void con
+el motor inicial. Con los headers vigentes de §27 devuelve FPDF_BOOL y consume el
+objeto tanto al transferirlo a la página como al liberarlo si falla; se comprueba
+su retorno y se anula el propietario RAII en ambos caminos. Se mantienen los
+controles de conteo/identidad después del éxito. Los recursos propios se liberan con RAII;
 un fallo posterior abandona el documento privado, sin publicar una salida parcial.
 `generateContent` se llama una vez por página modificada tras todas sus firmas.
 
@@ -721,6 +726,85 @@ El estado de compilación y las comprobaciones pendientes de salida autónoma,
 apertura externa, aspecto de firmas, páginas originales, integridad del original,
 cancelación/fallos, tiempos y tamaños se registran en PDFIUM-INCREMENTAL-001 de
 BACKLOG. Compilar no verifica formato incremental efectivo ni compatibilidad.
+
+## 27. Motor PDFium con corrección de persistencia incremental
+
+El caso comunicado por el usuario produce salida sin firma aunque el motor
+devuelva éxito: inputBytes=198855860, outputBytes=198856032,
+requestedSaveMode=incremental, saveFlags=1, success=true. La revisión binaria
+arm64/x86_64 que él aporta encuentra la lógica antigua de
+CPDF_Creator::InitNewObjNumOffsets. Las referencias oficiales e697afe4fa90045e56f7bda475bab18575ce06ea
+y a25c77d7de63737089dacc4e38d41ce241575845 muestran la diferencia: antes se omite
+todo objeto si is_incremental_ es verdadero; después se omiten objetos anteriores
+solo en el modo no incremental. El cambio corrector real es
+`2ddec2c6db6a368f166b5dd1039560dc322cb59b` del 10/09/2025, con prueba upstream
+IncrementalSaveWithModifications. a25c77d... es una revisión posterior de flags,
+no el primer arreglo. Las pruebas upstream se consultan como evidencia de fuente,
+no se declaran ejecutadas aquí ni prueban esta combinación Android/JNI.
+
+Se selecciona el precompilado Android sin V8/XFA **PDFium 158.0.8111.0** publicado
+por bblanchon/pdfium-binaries, tag fijo chromium/8111, release inmutable ID
+417611707 del 19/10/2026, constructor en
+`2de99cdab0cd84493538ce141342515b95ebb15c`. Se evita una descarga flotante latest
+y una migración de binding. La revisión de fuente resuelta de chromium/8111 es
+`a50f1a5953264de698f398fe3a2ef6153677fafa`, coincidente con el último commit de
+fuente enumerado por la publicación; su creador mantiene la corrección. Los
+headers edit/save y fpdfview original se contrastan con esa revisión oficial.
+La atestación publicada fija el constructor, no el checkout transitivo del motor;
+se preserva sin afirmar verificación criptográfica Sigstore no ejecutada.
+
+`provenance/chromium-8111/ENGINE.json` distingue repositorios/revisiones de binding,
+motor y constructor, base de esa identificación, hashes de archivo tgz y .so por
+ABI, hashes de headers y límites de la evidencia. Junto a él quedan la información
+de release, atestación/payload, configuración args.gn por ABI, scripts/parches del
+constructor y el informe de compatibilidad. Los hashes de archivos descargados
+se contrastan con los digests de la publicación inmutable y sus subjects.
+Se conservan las licencias/avisos del distribuidor, PDFium y dependencias.
+
+| Comprobación | Decisión y alcance |
+| --- | --- |
+| ABI | Mantener armeabi-v7a, arm64-v8a, x86 y x86_64, con una única libpdfium.so por ABI. |
+| API mínima | args.gn y nota ELF declaran 23; el anfitrión permanece en minSdk 28. Todas las importaciones fuertes se contrastan con stubs Android API 28 por ABI. |
+| Runtime | ELF requiere solo libdl.so/libm.so/libc.so, sin libc++_shared.so externo. Motor con runtime C++ interno; puente con c++_static del NDK 26.3.11579264. La interfaz compartida es C pública/handles opacos, no objetos C++. |
+| Herramientas | El motor precompilado identifica NDK r30 build 16248370; no se instala ese toolchain ni se compila PDFium. Kotlin 2.2.0, AGP 8.9.2, Gradle 8.11.1, Java/JVM 11, NDK r26d y CMake 3.22.1 del anfitrión/puente se conservan. |
+| Alineación | LOAD de 16 KB en arm64-v8a/x86_64 del motor; 4 KB en sus ABI de 32 bits. Puente propio de 16 KB y comprobación de alineación ZIP/ELF del APK; dispositivo de 16 KB sigue siendo otra verificación. |
+| Símbolos y headers | Los 80 símbolos PDFium requeridos por el puente están exportados en las cuatro ABI. Headers públicos idénticos entre paquetes y usados para recompilar el puente; auxiliares Android utils conservados. |
+
+Se sustituye únicamente el motor y sus headers públicos/licencias, conservando la
+base Kotlin/JNI v1.0.35 y sus extensiones. La comparación de declaraciones usadas
+encuentra el cambio de retorno de FPDFPage_InsertObject y el nombre de un parámetro
+de FPDF_SaveAsCopy (sin cambio de ABI de esta última). El contrato vigente de
+InsertObject exige comprobar FPDF_BOOL y no liberar dos veces la imagen: éxito
+transfiere propiedad a la página y fallo libera el objeto. signature_export.inc
+se adapta a ambos caminos, con el mismo conteo/identidad después del éxito.
+
+No se cambia selección FULL/INCREMENTAL, callback, flags, lecturas completas/EINTR,
+sincronización, descriptor original de solo lectura, búfer 64 KiB, errores,
+cancelación, limpieza, publicación ni historial. PDFBox permanece. No se introducen
+parches hexadecimales, offsets de estructuras internas, APIs privadas, manejo
+manual de cola ni fallback silencioso. El proyecto original y LectorDocumentos
+quedan fuera del cambio.
+
+Comprobación mínima fuera del flujo de guardado: abrir un PDF pequeño ORIGINAL,
+colocar una firma, exportar mediante Guardar con PDFium incremental y, una vez
+terminado, reabrir el archivo NUEVO en un visor externo para confirmar persistencia
+de la firma y conservación de páginas/contenido original. Comprobar además
+posición, tamaño, transparencia y original intacto. No se incorpora esa reapertura
+al botón Guardar ni se usa para modificar el intervalo de métricas. Después repetir
+el PDF grande y comparar FULL/INCREMENTAL/PDFBox con el mismo original y borrador;
+FULL debe medirse también con este motor nuevo para que la comparación sea controlada.
+
+El fallo anterior y las verificaciones realmente ejecutadas/pendientes se registran
+en PDFIUM-ENGINE-001 de BACKLOG. Que compile o saveAsCopy devuelva true no demuestra
+la persistencia de la firma ni cierra la comprobación externa.
+
+Referencias de procedencia:
+
+- Antes: https://pdfium.googlesource.com/pdfium/+/e697afe4fa90045e56f7bda475bab18575ce06ea/core/fpdfapi/edit/cpdf_creator.cpp
+- Después: https://pdfium.googlesource.com/pdfium/+/a25c77d7de63737089dacc4e38d41ce241575845/core/fpdfapi/edit/cpdf_creator.cpp
+- Arreglo: https://pdfium.googlesource.com/pdfium/+/2ddec2c6db6a368f166b5dd1039560dc322cb59b
+- Distribución fija: https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium/8111
+- Fuente seleccionada: https://pdfium.googlesource.com/pdfium/+/a50f1a5953264de698f398fe3a2ef6153677fafa/core/fpdfapi/edit/cpdf_creator.cpp
 
 ## Fuentes técnicas
 

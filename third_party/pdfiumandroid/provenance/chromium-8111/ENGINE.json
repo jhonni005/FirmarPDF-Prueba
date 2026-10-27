@@ -1,0 +1,137 @@
+{
+  "version": "158.0.8111.0",
+  "release_tag": "chromium/8111",
+  "release_url": "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium/8111",
+  "release_id": 417611707,
+  "release_immutable": true,
+  "published_at": "2026-10-19T18:30:12Z",
+  "distribution_repository": "https://github.com/bblanchon/pdfium-binaries",
+  "distribution_revision": "2de99cdab0cd84493538ce141342515b95ebb15c",
+  "pdfium_source_repository": "https://pdfium.googlesource.com/pdfium",
+  "pdfium_branch": "refs/heads/chromium/8111",
+  "pdfium_source_revision": "a50f1a5953264de698f398fe3a2ef6153677fafa",
+  "source_revision_evidence": "Gitiles branch head matches the final source commit listed in the immutable release changelog; official edit/save headers and fpdfview.h.orig match this exact revision. Publisher attestation pins the distribution builder, not the transitive PDFium checkout.",
+  "incremental_fix_revision": "2ddec2c6db6a368f166b5dd1039560dc322cb59b",
+  "incremental_fix_date": "2025-09-10",
+  "verification_date": "2026-10-26",
+  "attestation_signature_verified": false,
+  "attestation_checks": "Archive SHA-256 matches GitHub immutable release metadata and the subjects in the published Sigstore payload. Cryptographic Sigstore signature/identity verification was not executed.",
+  "abi": {
+    "armeabi-v7a": {
+      "archive": "pdfium-android-arm.tgz",
+      "archive_url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8111/pdfium-android-arm.tgz",
+      "archive_sha256": "fc6a54e286a46a52e45d5bd52803f59f3b86dfcff73ba8f458939872f5466de3",
+      "library_sha256": "37ae11ec1fec39e4181e8f4a838beaee5ca5b4040c70ed65eed9657778f0710d",
+      "declared_min_sdk": 23,
+      "elf_load_alignments": [
+        4096,
+        4096,
+        4096
+      ],
+      "needed": [
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "pdfium_required_symbols_checked": 80,
+      "unresolved_strong_imports_api28": []
+    },
+    "arm64-v8a": {
+      "archive": "pdfium-android-arm64.tgz",
+      "archive_url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8111/pdfium-android-arm64.tgz",
+      "archive_sha256": "727cb2645ece75d28d0b72f2ec05b82858ca3bfb6712cd333ffc248807016e2c",
+      "library_sha256": "6cb23729fd58916729bfb7cebe9d7e44b8090b6c242be67261023865dc21f8e2",
+      "declared_min_sdk": 23,
+      "elf_load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "pdfium_required_symbols_checked": 80,
+      "unresolved_strong_imports_api28": []
+    },
+    "x86": {
+      "archive": "pdfium-android-x86.tgz",
+      "archive_url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8111/pdfium-android-x86.tgz",
+      "archive_sha256": "7bb3c95e17450a077658a8128ba074dfdc040249d6f33c5d065d2146b3a82621",
+      "library_sha256": "6afb4d6eafbea7336e083a8a748fe7e8b5d37359c8ace865c5dc49364d5f13e0",
+      "declared_min_sdk": 23,
+      "elf_load_alignments": [
+        4096,
+        4096,
+        4096
+      ],
+      "needed": [
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "pdfium_required_symbols_checked": 80,
+      "unresolved_strong_imports_api28": []
+    },
+    "x86_64": {
+      "archive": "pdfium-android-x64.tgz",
+      "archive_url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8111/pdfium-android-x64.tgz",
+      "archive_sha256": "e2c31cffe42ee3a34e2b9d6c6c254ddf5da1541ce2d82216171e9354c86f0a7c",
+      "library_sha256": "4c9127ad3886fc593572a869f5989b1a22103ab7a523326f2b107429d84e856a",
+      "declared_min_sdk": 23,
+      "elf_load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "pdfium_required_symbols_checked": 80,
+      "unresolved_strong_imports_api28": []
+    }
+  },
+  "previous_engine": {
+    "binding_tag": "v1.0.35",
+    "binding_revision": "2052da7c071002446f1e2dff082b373a17ebadd0",
+    "binary_sha256_manifest": "ebbc6aaa2c37c3d54041bf2e14c2bb21946d212ed38bf2c860bb09fcf79d91b9  arm64-v8a/libpdfium.so\ndbe87889b12b861585edd505c45eb91c67a70aa941a8b2d98eef0c46ece3b024  armeabi-v7a/libpdfium.so\n828960dda5e6e9a118d19e7e0861ea23e08f7861870e122ef2bf47cfe4492f1a  x86/libpdfium.so\n5f98a1b298d0c1d6558aa656cf92ee11f4f0f8df0371f871948af1c003ce1784  x86_64/libpdfium.so\n"
+  },
+  "host_toolchain_unchanged": {
+    "ndk": "26.3.11579264",
+    "cmake": "3.22.1",
+    "agp": "8.9.2",
+    "kotlin": "2.2.0",
+    "gradle": "8.11.1"
+  },
+  "native_runtime": "Engine reports NDK r30 build 16248370/API 23 in .note.android.ident, ships its internal C++ runtime, and needs only libc.so/libm.so/libdl.so. JNI remains c++_static with NDK r26d; no C++ objects cross the public PDFium C ABI.",
+  "header_sha256": {
+    "cpp/fpdf_deleters.h": "8020789862e81775e777c3bb6e44eb429eaba6cbf8904bdf2e915fa50d38c47d",
+    "cpp/fpdf_scopers.h": "8d2bd2da93bd5564660268203e66576dc82c23bd17157969758ab7c51355c055",
+    "fpdf_annot.h": "40add618da4d09ee1f8eaa2c1ff301dab90ec8315d94af673feabdb67abfce3b",
+    "fpdf_attachment.h": "4f007ea052eaed19c9b1c888ca63a2abde96f0252ac8f37805a1a50ef3b9a260",
+    "fpdf_catalog.h": "7e6a79391f6153deb45bafe49ef4d6eb10f6382eed20fa92c2ee9941342e6668",
+    "fpdf_dataavail.h": "23a4c77273cdc11b77f4d7ff40e9290429854cd45708f89c93c424b9ecfdab77",
+    "fpdf_doc.h": "f91bba762f04b2fcda6c10c614ec41742e9d47f7a9813f6c3acc2aa0f6e195b0",
+    "fpdf_edit.h": "b6050bc6a5505785c28490509b399cbb5c4d3a34dd580004d43f30c52c6e035d",
+    "fpdf_ext.h": "ef813297753feeecd685ef60a6a6f1ad00f43156615d5570f827c9283e435461",
+    "fpdf_flatten.h": "b2cf5ed9a7ead79c6d6685a7369573f0a55b16cc9972537d1405f19847504ca3",
+    "fpdf_formfill.h": "8792ed53df3f5852f1a8b98d2b6e140898ab595888df8a2f70bc8c165d188c12",
+    "fpdf_fwlevent.h": "60585b9c92227790d7dcce482b2b8f8ebabc810c24aebc83cf6564fc140f06db",
+    "fpdf_javascript.h": "e1655b56183d1c7dcf68b1bcd73ebb67ee13ea44f506d03d46ed44e9bd0e974c",
+    "fpdf_ppo.h": "931cccda62d725280b86020c4663df7a4f16bb6cc4fac55f9db26cc657e74556",
+    "fpdf_progressive.h": "0e99f7e7d2a818ed56ff8529f7a90a121cc86cdecda6b1682eadd60259021b16",
+    "fpdf_save.h": "96a78a3e3eb8a387dc4a35c1e87b430618e9ee8e7ceae9fea424baf1de6b497a",
+    "fpdf_searchex.h": "30cee4b25aa8015687a55fd628f84188aed8289e4bd5a3469b8813bbf3de8991",
+    "fpdf_signature.h": "eadfabc91722d1247321d31dab6a94f8284e36717c0019cc38f54b7c51ec826b",
+    "fpdf_structtree.h": "a4f8523370b05ef519858d0eea9b4786bc08f3e1a34cdcd941f8b60f8d4ae3f4",
+    "fpdf_sysfontinfo.h": "ca596613053f4f168acafe0c9469c83a7ef94eb6cb5e59fe5e959308d428d90e",
+    "fpdf_text.h": "4682f8553dc1d29bbee95cdcddefebbd96522c5be654807906240f8571593726",
+    "fpdf_thumbnail.h": "b223e622889bca40e4ce709e934bc11a8696a054c97a605486eb7c214e4db197",
+    "fpdf_transformpage.h": "15321dc2311ea60e04c28deb75a5decb560d29a3bc4b007588a9dbec6430f867",
+    "fpdfview.h": "21fb11834607c74cbc1e3a9ac14a85a5dba95d7669ec86c21c05a4890a38648d",
+    "fpdfview.h.orig": "bb9e359d39c132807f731dd2b3c8d5b29dc311f2127aee8f206b5f2ef06f7cc2"
+  }
+}

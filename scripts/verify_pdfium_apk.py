@@ -43,9 +43,11 @@ def elf_load_alignments(data):
 
 
 def main():
+    expected_hashes = {}
     for line in (PREBUILT / "SHA256SUMS.txt").read_text().splitlines():
         digest, name = line.split()
         assert hashlib.sha256((PREBUILT / name).read_bytes()).hexdigest() == digest, name
+        expected_hashes[name] = digest
     with zipfile.ZipFile(APK) as archive, APK.open("rb") as raw:
         names = archive.namelist()
         assert len(names) == len(set(names)), "Duplicate ZIP entries"
@@ -57,6 +59,8 @@ def main():
             _, abi, library = entry.filename.split("/")
             assert abi in ABIS, f"Unexpected ABI: {abi}"
             data = archive.read(entry)
+            if library == "libpdfium.so":
+                assert hashlib.sha256(data).hexdigest() == expected_hashes[f"{abi}/{library}"], f"APK engine differs from pinned prebuilt: {entry.filename}"
             alignments = elf_load_alignments(data)
             # The compiled bridge in all ABIs, and every packaged 64-bit native library.
             if library == "libpdfiumandroid.so" or abi in {"arm64-v8a", "x86_64"}:
@@ -69,7 +73,7 @@ def main():
             assert entry.compress_type == zipfile.ZIP_STORED, f"Expected uncompressed native library: {entry.filename}"
             assert data_offset % 16384 == 0, f"ZIP data alignment below 16 KB: {entry.filename}"
             print(f"{entry.filename}: min_LOAD={min(alignments)} ZIP_offset_mod_16384={data_offset % 16384}")
-    print("PASS: prebuilt hashes, unique native entries, expected ABI, ELF and ZIP alignment")
+    print("PASS: prebuilt/APK engine hashes, unique native entries, expected ABI, ELF and ZIP alignment")
 
 
 if __name__ == "__main__":

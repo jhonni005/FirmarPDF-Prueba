@@ -1,0 +1,47 @@
+{
+  "commit": "2ddec2c6db6a368f166b5dd1039560dc322cb59b",
+  "tree": "28b4791bfe1e34a326a748a2e1089ca52039ea76",
+  "parents": [
+    "6fe4d02d826a0271fc830c1d1e290c048fa86d11"
+  ],
+  "author": {
+    "name": "Rulong Chen\uff08\u9648\u6c5d\u9f99\uff09",
+    "email": "rulong.crl@alibaba-inc.com",
+    "time": "Wed Sep 10 09:55:35 2025 -0700"
+  },
+  "committer": {
+    "name": "Pdfium LUCI CQ",
+    "email": "pdfium-scoped@luci-project-accounts.iam.gserviceaccount.com",
+    "time": "Wed Sep 10 09:55:35 2025 -0700"
+  },
+  "message": "Fix incremental PDF save functionality for edited documents\n\nPreviously, CPDF_Creator::InitNewObjNumOffsets() would skip all objects\nin incremental save mode due to the condition: `if (is_incremental_ ||\npair.second->GetObjNum() == CPDF_Object::kInvalidObjNum)`\n\nThis caused incremental saves to only contain metadata without actual\ncontent modifications, making the feature effectively broken.\n\nChanges:\n- Modified InitNewObjNumOffsets() to properly handle incremental mode\n- In incremental mode: include modified/new objects in new_obj_num_array_\n- In non-incremental mode: preserve original logic (skip existing objects)\n- Updated SaveSimpleDocIncremental test expectation (985u -> 1178u bytes)\n- Added comprehensive test IncrementalSaveWithModifications to verify:\n  * Modified objects are included in incremental saves\n  * Saved documents render correctly with modifications\n  * File structure contains proper incremental save markers\n\nThe fix enables proper incremental saving of PDF documents after\nediting.\n\nBug: 42270523\nChange-Id: Ic055c78ac94991b5b147f4320447089e159ae67a\nReviewed-on: https://pdfium-review.googlesource.com/c/pdfium/+/135350\nReviewed-by: Tom Sepez <tsepez@chromium.org>\nCommit-Queue: Tom Sepez <tsepez@chromium.org>\nReviewed-by: Lei Zhang <thestig@chromium.org>\n",
+  "tree_diff": [
+    {
+      "type": "modify",
+      "old_id": "4a65f36502c8a97aa4408f1d4055c73f8d186d36",
+      "old_mode": 33188,
+      "old_path": "AUTHORS",
+      "new_id": "612fdbc42d42af5ad4458936f2940dcba8bc666e",
+      "new_mode": 33188,
+      "new_path": "AUTHORS"
+    },
+    {
+      "type": "modify",
+      "old_id": "deb2181fd5d6c8e98a5c3c8960eff00c44d53993",
+      "old_mode": 33188,
+      "old_path": "core/fpdfapi/edit/cpdf_creator.cpp",
+      "new_id": "9d16ee33fe9af3fbe49f63460e559ce39862b179",
+      "new_mode": 33188,
+      "new_path": "core/fpdfapi/edit/cpdf_creator.cpp"
+    },
+    {
+      "type": "modify",
+      "old_id": "ac8ec4b2dad4d9837e75557f2a11f5b76f36c06d",
+      "old_mode": 33188,
+      "old_path": "fpdfsdk/fpdf_save_embeddertest.cpp",
+      "new_id": "ae44648ddf38b7b2c605ae4fccc4b78d9b720733",
+      "new_mode": 33188,
+      "new_path": "fpdfsdk/fpdf_save_embeddertest.cpp"
+    }
+  ]
+}
