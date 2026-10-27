@@ -33,6 +33,17 @@ default_min_sdk_version=28, use_custom_libcxx=false. El runtime C++ estático de
 NDK fijado se entrega con el archivo para el enlace privado; el puente sigue
 compilándose con NDK r26d del proyecto. No se parchea el algoritmo de guardado.
 
+Además del runtime C++, el paquete debe incluir
+`libclang_rt.builtins-aarch64-android.a` del Clang Android fijado en DEPS. libyuv
+SME referencia __arm_get_current_vg y __arm_tpidr2_save, ausentes en el runtime
+de r26d. Se enlaza ese archivo de soporte de forma privada sin migrar el NDK
+anfitrión. SHA-256 del builtins:
+`32faf9cae893d732d45799f18040b90c69f847bc408d8207c6f65dd2c2f940e4`.
+El manifiesto documenta el tar.xz de origen, generación y SHA-256; la licencia
+compiler-rt se conserva desde la revisión de su etiqueta LLVM
+`62397f8b3c3986f54187ce08f00b3448ea1f8880`. La cadena --version del compilador
+también se registra literalmente y puede identificar otro commit del paquete.
+
 Único parche de metadatos GN: `android-skia-gn.patch` elimina del invocador
 skia_opts una modificación duplicada de configs, indefinida en ese ámbito en
 Android release. La plantilla skia_source_set ya aplica optimize_max dentro del
@@ -75,6 +86,10 @@ args.gn, configuración GN efectiva, dependencias, compilador, run URL y hashes.
 La importación verifica revisión, ABI, API 28 y cada hash antes de copiarlo a
 `third_party/embedpdf/prebuilt`, ignorado por Git. Headers/licencias/procedencia
 se conservan además junto al puente. No toca third_party/pdfiumandroid/prebuilt.
+Las rutas largas del artefacto se gestionan con el prefijo Windows extendido,
+sin cambiar políticas globales. La copia legal versionada se aplana y
+licenses/INDEX.json conserva la relación con las rutas originales; el árbol
+original íntegro sigue en el artefacto y en prebuilt, con hashes verificables.
 
 Cuando exista el artefacto importado:
 
@@ -86,6 +101,11 @@ python scripts/verify_pdfium_apk.py --require-embedpdf
 
 Estado y resultados reales, incluidos fallos/reintentos: BACKLOG,
 `EMBEDPDF-ANDROID-001`. Las instrucciones no equivalen a una compilación ejecutada.
+`third_party/embedpdf/ENGINE.json` identifica el artefacto descargado y
+`third_party/embedpdf/APK-VERIFICATION.json` conserva hashes del APK/puente,
+entradas estáticas usadas, exportaciones, dependencias e inspección API 28.
+Los binarios y checkouts grandes permanecen fuera de Git. Para reconstruir
+desde otro checkout hay que descargar/importar el artefacto antes de Gradle.
 
 ## Aislamiento y recorrido
 
@@ -96,6 +116,14 @@ El verificador exige esa única exportación, ningún FPDF/EPDF importado o expo
 ausencia de TEXTREL, dependencias de plataforma disponibles en API 28, ELF/ZIP
 16 KiB y hashes intactos de los cuatro motores anteriores. No basta renombrar
 una biblioteca ni depender de RTLD_LOCAL.
+
+Excepción de importación débil revisada: compiler-rt aarch64.c.o referencia
+memfd_create solo como marcador de presencia de API 30. Su resolver FMV comprueba
+la dirección y retorna si falta; no llama a esa función. Se contrastó el código
+`compiler-rt/lib/builtins/cpu_model/aarch64/fmv/android.inc` de
+62397f8b3c3986f54187ce08f00b3448ea1f8880 y el resolver/relocación GOT del binario
+enlazado. El verificador admite solo ese marcador débil fuera de API 28;
+cualquier otro import débil no disponible exige una nueva revisión explícita.
 
 No se transfieren handles nativos entre Kotlin ni entre motores. Una llamada JNI
 síncrona ejecutada en Executors.newSingleThreadExecutor contiene InitThread, base,

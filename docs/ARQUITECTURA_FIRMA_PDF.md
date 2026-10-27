@@ -1061,7 +1061,13 @@ dependencia Expat ausente del DEPS; conserva el objetivo de geometría y las
 opciones de optimización que ya aplica su plantilla. El diff acompaña al paquete.
 La configuración efectiva, revisiones, headers, licencias, compilador y hashes
 acompañan al artefacto. El toolchain NDK fijado por DEPS para el motor se distingue
-del NDK r26d que conserva el anfitrión Android. Receta: `tools/embedpdf-android/README.md`.
+del NDK r26d que conserva el anfitrión Android. El motor también entrega los
+builtins Android de Clang fijados en DEPS: libyuv SME requiere
+`__arm_get_current_vg` y `__arm_tpidr2_save`, ausentes en compiler-rt de r26d.
+Se enlazan estáticamente y se ocultan en el mismo puente; no se inventan stubs
+ni se desactivan optimizaciones para ocultar el error. El manifiesto registra
+URL/generación/hash del paquete y licencia LLVM correspondiente a su etiqueta.
+Receta: `tools/embedpdf-android/README.md`.
 
 El CMake del binding existente añade `libembedpdf_signature.so` exclusivamente en
 arm64-v8a cuando está presente el archivo estático importado. Enlaza motor y runtime
@@ -1070,6 +1076,10 @@ Solo se exporta la entrada JNI; no debe importar/exportar símbolos FPDF/EPDF ni
 depender del PDFium del visor. No se intercambian documentos, páginas, bitmaps ni
 punteros entre motores. La auditoría estática exige estas propiedades, imports
 resolubles en API 28, ausencia de TEXTREL y alineación ELF/ZIP de 16 KiB.
+El único marcador débil fuera de API 28 admitido tras revisión es memfd_create
+de compiler-rt: el resolver FMV solo comprueba su presencia como señal de API 30
+y retorna si falta. Se contrastaron el código fijado y el resolver/GOT del
+binario; no se exige esa API para cargar el puente en Android 9.
 
 ### Ciclo de vida y salida
 

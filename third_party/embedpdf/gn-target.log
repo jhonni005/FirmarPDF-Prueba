@@ -1,0 +1,332 @@
+Target //:pdfium
+type: static_library
+toolchain: //build/toolchain/android:android_clang_arm64
+
+visibility
+  *
+
+metadata
+  {
+
+  }
+
+testonly
+  false
+
+check_includes
+  true
+
+check_includes_strict
+  false
+
+allow_circular_includes_from
+
+public
+  [All headers listed in the sources are public.]
+
+inputs
+  //unsafe_buffers_paths.txt
+
+configs (in order applying, try also --tree)
+  //build/config/compiler/pgo:default_pgo_flags
+  //build/config/compiler:afdo
+  //build/config/compiler:afdo_optimize_size
+  //build/config/compiler:cet_shadow_stack
+  //build/config/compiler:chromium_code
+  //build/config/compiler:compiler
+  //build/config/compiler:compiler_arm_fpu
+  //build/config/compiler:compiler_arm_thumb
+  //build/config/compiler:default_include_dirs
+  //build/config/compiler:default_init_stack_vars
+  //build/config/compiler:default_optimization
+  //build/config/compiler:default_stack_frames
+  //build/config/compiler:default_symbols
+  //build/config/compiler:disallow_unstable_features
+  //build/config/compiler:no_exceptions
+  //build/config/compiler:no_rtti
+  //build/config/compiler:no_unresolved_symbols
+  //build/config/compiler:runtime_library
+  //build/config/compiler:sanitize_c_array_bounds
+  //build/config/compiler:sanitize_return
+  //build/config/compiler:sanitize_unreachable
+  //build/config/compiler:thinlto_optimize_default
+  //build/config/compiler:tot_warnings
+  //build/config/coverage:default_coverage
+  //build/config/sanitizers:default_sanitizer_flags
+  //build/config:feature_flags
+  //build/config/gcc:symbol_visibility_hidden
+  //build/config/android:default_orderfile_instrumentation
+  //build/config/clang:extra_warnings
+  //build/config/clang:find_bad_constructs
+  //build/config/clang:unsafe_buffers
+  //build/config:release
+  //:pdfium_strict_config
+  //:pdfium_public_config
+  //third_party/libyuv:libyuv_config
+  //third_party/abseil-cpp:absl_include_config
+  //third_party/icu:icu_config
+  //third_party:fx_libopenjpeg_config
+  //third_party:freetype_public_includes_config
+  //third_party/harfbuzz:harfbuzz_config
+  //:pdfium_implementation_config
+
+public_configs (in order applying, try also --tree)
+  //:pdfium_public_config
+  //third_party/abseil-cpp:absl_include_config
+  //third_party/icu:icu_config
+
+all_dependent_configs (in order applying, try also --tree)
+  //third_party/libyuv:libyuv_config
+
+outputs
+  //out/firmarpdf-arm64/obj/libembedpdf.a
+
+asmflags
+  -fPIC
+  -fno-delete-null-pointer-checks
+  -fno-strict-overflow
+  -fno-ident
+  -fno-math-errno
+  -fno-strict-aliasing
+  -fstack-protector
+  -funwind-tables
+  -fPIC
+  -fcolor-diagnostics
+  -fdiagnostics-show-inlining-chain
+  -fmerge-all-constants
+  -fcrash-diagnostics-dir=../clang-crashreports
+  -fno-lifetime-dse
+  -mllvm
+  -instcombine-lower-dbg-declare=0
+  -mllvm
+  -split-threshold-for-reg-with-hint=0
+  -ffp-contract=off
+  -std=c11
+  -ffunction-sections
+  -fno-short-enums
+  -mbranch-protection=standard
+  --target=aarch64-linux-android28
+  -mno-outline
+  -Wa,-fdebug-compilation-dir,.
+  -g0
+  --sysroot=../../third_party/android_toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+
+cflags
+  -Wall
+  -Wextra
+  -Wimplicit-fallthrough
+  -Wextra-semi
+  -Wunreachable-code-aggressive
+  -Wgnu
+  -Wno-gnu-anonymous-struct
+  -Wno-gnu-conditional-omitted-operand
+  -Wno-gnu-include-next
+  -Wno-gnu-label-as-value
+  -Wno-gnu-redeclared-enum
+  -Wno-gnu-statement-expression
+  -Wno-gnu-zero-variadic-macro-arguments
+  -Wno-zero-length-array
+  -Wthread-safety
+  -Wno-unused-template
+  -Wunguarded-availability
+  -Wno-missing-field-initializers
+  -Wno-unused-parameter
+  -Wno-psabi
+  -Wno-stringop-overread
+  -Wloop-analysis
+  -Wno-unneeded-internal-declaration
+  -Wno-cast-function-type
+  -Wno-thread-safety-reference-return
+  -Wno-nontrivial-memcall
+  -Wno-uninitialized-const-pointer
+  -Wno-unused-but-set-global
+  -Wexit-time-destructors
+  -Wshadow
+  -fno-delete-null-pointer-checks
+  -fno-strict-overflow
+  -fno-ident
+  -fno-math-errno
+  -fno-strict-aliasing
+  -fstack-protector
+  -funwind-tables
+  -fPIC
+  -fcolor-diagnostics
+  -fdiagnostics-show-inlining-chain
+  -fmerge-all-constants
+  -fcrash-diagnostics-dir=../clang-crashreports
+  -fno-lifetime-dse
+  -mllvm
+  -instcombine-lower-dbg-declare=0
+  -mllvm
+  -split-threshold-for-reg-with-hint=0
+  -ffp-contract=off
+  -ffunction-sections
+  -fno-short-enums
+  -mbranch-protection=standard
+  --target=aarch64-linux-android28
+  -mno-outline
+  -Wno-builtin-macro-redefined
+  -D__DATE__=
+  -D__TIME__=
+  -D__TIMESTAMP__=
+  -ffile-compilation-dir=.
+  -no-canonical-prefixes
+  -ftrivial-auto-var-init=pattern
+  -O2
+  -fdata-sections
+  -ffunction-sections
+  -fno-unique-section-names
+  -fno-omit-frame-pointer
+  -g0
+  -fsanitize=array-bounds
+  -fsanitize-trap=array-bounds
+  -fsanitize-ignore-for-ubsan-feature=array-bounds
+  -Wno-unsafe-buffer-usage-in-static-sized-array
+  -fsanitize=return
+  -fsanitize-trap=return
+  -fsanitize-ignore-for-ubsan-feature=return
+  -fsanitize=unreachable
+  -fsanitize-trap=unreachable
+  -fsanitize-ignore-for-ubsan-feature=unreachable
+  -fvisibility=hidden
+  -Wheader-hygiene
+  -Wstring-conversion
+  -Wtautological-overlap-compare
+  -Wcovered-switch-default
+  -Wlifetime-safety-permissive
+  -Wtautological-unsigned-zero-compare
+  -Wctad-maybe-unsupported
+  -Wshadow
+  -Wglobal-constructors
+
+cflags_c
+  -std=c11
+  --sysroot=../../third_party/android_toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+
+cflags_cc
+  -Wno-invalid-offsetof
+  -Wenum-compare-conditional
+  -Wno-nullability-completeness
+  -std=c++20
+  -Wno-trigraphs
+  -gsimple-template-names
+  -fno-exceptions
+  -fno-rtti
+  --sysroot=../../third_party/android_toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+  -fvisibility-inlines-hidden
+
+cflags_objc
+  -std=c11
+  --sysroot=../../third_party/android_toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+
+cflags_objcc
+  -std=c++20
+  -Wno-trigraphs
+  -gsimple-template-names
+  -fno-exceptions
+  -fno-rtti
+  --sysroot=../../third_party/android_toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+  -fvisibility-inlines-hidden
+
+defines
+  __STDC_CONSTANT_MACROS
+  __STDC_FORMAT_MACROS
+  _FORTIFY_SOURCE=2
+  _GNU_SOURCE
+  __ARM_NEON__=1
+  ANDROID
+  __ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__
+  HAVE_SYS_UIO_H
+  ANDROID_NDK_VERSION_ROLL=2@30.0.16248370_1
+  CR_CLANG_REVISION="llvmorg-24-init-7747-g62397f8b-57"
+  _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
+  NDEBUG
+  NVALGRIND
+  DYNAMIC_ANNOTATIONS_ENABLED=0
+  OPJ_STATIC
+  PDF_ENABLE_FREETYPE
+  EPDF_THREAD_LOCAL_GLOBALS
+  PDF_USE_LIBYUV
+  PDF_USE_AGG
+  CHROMIUM
+  LIBYUV_DISABLE_LSX
+  LIBYUV_DISABLE_LASX
+  U_USING_ICU_NAMESPACE=0
+  U_ENABLE_DYLOAD=0
+  USE_CHROMIUM_ICU=1
+  U_ENABLE_TRACING=1
+  U_ENABLE_RESOURCE_TRACING=0
+  U_STATIC_IMPLEMENTATION
+  ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE
+  FT_CONFIG_MODULES_H="freetype-custom-config/ftmodule.h"
+  FT_CONFIG_OPTIONS_H="freetype-custom-config/ftoption.h"
+  FPDF_IMPLEMENTATION
+
+include_dirs
+  //
+  //out/firmarpdf-arm64/gen/
+  //third_party/libyuv/include/
+  //third_party/abseil-cpp/
+  //third_party/icu/source/common/
+  //third_party/icu/source/i18n/
+  //third_party/libopenjpeg/
+  //third_party/freetype/include/
+  //third_party/freetype/src/include/
+  //third_party/harfbuzz/src/src/
+  //third_party/harfbuzz/
+
+ldflags
+  -fPIC
+  -Wl,--exclude-libs=libvpx_assembly_arm.a
+  -Wl,-z,max-page-size=16384
+  --target=aarch64-linux-android28
+  -no-canonical-prefixes
+  -Wl,--warn-shared-textrel
+  -Wl,--gc-sections
+  -Wl,-z,defs
+  -Wl,--as-needed
+  --unwindlib=none
+  --sysroot=../../third_party/android_toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+
+Direct dependencies (try also "--all", "--tree", or even "--all --tree")
+  //:pdfium_public_headers_impl
+  //buildtools/third_party/libc++:all_modules
+  //constants:constants
+  //core/fpdfapi/page:page
+  //core/fpdfapi/parser:parser
+  //core/fpdfdoc:fpdfdoc
+  //core/fxcodec:fxcodec
+  //core/fxcrt:fxcrt
+  //core/fxge:fxge
+  //fpdfsdk:fpdfsdk
+  //fpdfsdk/formfiller:formfiller
+  //fxjs:fxjs
+
+libs
+  //third_party/llvm-build/Release+Asserts/lib/clang/24/lib/linux/libclang_rt.builtins-aarch64-android.a
+  log
+
+rustflags
+  -Cforce-unwind-tables=yes
+  -Crelocation-model=pic
+  -Cdefault-linker-libraries
+  -Zdep-info-omit-d-target
+  -Zmacro-backtrace
+  -Zremap-cwd-prefix=.
+  -Zexternal-clangrt
+  --color=always
+  --target=aarch64-linux-android
+  -Cembed-bitcode=no
+  -Clto=no
+  -Cpanic=abort
+  -Zpanic_abort_tests
+  -Zbranch-protection=pac-ret,bti
+  -Copt-level=3
+  -Cforce-frame-pointers=yes
+  -Zallow-features=
+  -Zdefault-visibility=hidden
+
+externs
+
+output_name
+  embedpdf

@@ -90,7 +90,8 @@ if(ANDROID_ABI STREQUAL "arm64-v8a" AND EXISTS "${EMBEDPDF_LIB}/libembedpdf_engi
     # Private C++ runtime from the engine's pinned NDK; host stays on NDK r26d.
     target_link_libraries(embedpdf_signature PRIVATE "-Wl,--start-group"
         "${EMBEDPDF_LIB}/libembedpdf_engine.a" "${EMBEDPDF_LIB}/libc++_static.a"
-        "${EMBEDPDF_LIB}/libc++abi.a" "-Wl,--end-group"
+        "${EMBEDPDF_LIB}/libc++abi.a"
+        "${EMBEDPDF_LIB}/libclang_rt.builtins-aarch64-android.a" "-Wl,--end-group"
         ${android-lib} ${jnigraphics-lib} ${log-lib})
     if(EXISTS "${EMBEDPDF_LIB}/libunwind.a")
         target_link_libraries(embedpdf_signature PRIVATE "${EMBEDPDF_LIB}/libunwind.a")

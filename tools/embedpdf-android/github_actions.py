@@ -42,6 +42,8 @@ def api(path, method='GET', data=None):
 
 
 def extract(data, target):
+    if os.name == 'nt':
+        target = Path('\\\\?\\' + str(target.resolve()))
     target.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(io.BytesIO(data)) as z:
         for name in z.namelist():

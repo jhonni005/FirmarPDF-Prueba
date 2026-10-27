@@ -23,13 +23,19 @@ ABIS = {"armeabi-v7a", "arm64-v8a", "x86", "x86_64"}
 
 def verify_embedpdf(archive, names, ndk):
     root = ROOT / "third_party/embedpdf"
+    if os.name == "nt":
+        root = Path("\\\\?\\" + str(root.resolve()))
     manifest = json.loads((root / "ENGINE.json").read_text())
     assert manifest["engine_revision"] == "5f7608ba4a634c94cd718067d6b678a45ba89088"
     assert manifest["abi"] == "arm64-v8a" and manifest["min_sdk"] == 28
+    for library in ("libembedpdf_engine.a", "libc++_static.a", "libc++abi.a", "libclang_rt.builtins-aarch64-android.a"):
+        assert "lib/arm64-v8a/" + library in manifest["files"], "Incomplete engine provenance: " + library
     for name, digest in manifest["files"].items():
         path = (root / "prebuilt" / name).resolve()
         assert path.is_relative_to((root / "prebuilt").resolve())
         assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, name
+        if name.startswith("include/"):
+            assert (root / name).read_bytes().replace(b"\r\n", b"\n") == path.read_bytes().replace(b"\r\n", b"\n"), "Bridge header differs from fixed engine: " + name
     native = "lib/arm64-v8a/libembedpdf_signature.so"
     assert names.count(native) == 1, "Missing isolated ARM64 bridge"
     assert not any(name.endswith("/libembedpdf_signature.so") and name != native for name in names), "Unexpected EmbedPDF ABI"
@@ -60,7 +66,7 @@ def verify_embedpdf(archive, names, ndk):
     allowed = {"libc.so", "libm.so", "libdl.so", "liblog.so", "libandroid.so", "libjnigraphics.so"}
     assert set(needed) <= allowed, needed
     entries = symbols(target)
-    exported = sorted(s["name"] for s in entries if s["index"] != "UND" and s["bind"] in {"GLOBAL", "WEAK"} and s["visibility"] == "DEFAULT")
+    exported = sorted(s["name"] for s in entries if s["index"] != "UND" and s["bind"] in {"GLOBAL", "WEAK"} and s["visibility"] in {"DEFAULT", "PROTECTED"})
     expected_entry = "Java_com_zonadev_firmarpdf_data_pdf_EmbedPdfNativeBridge_nativeExport"
     assert exported == [expected_entry], exported
     assert not any(s["index"] == "UND" and s["name"].startswith(("FPDF", "EPDF")) for s in entries), "Cross-engine resolution possible"
@@ -71,15 +77,23 @@ def verify_embedpdf(archive, names, ndk):
         available.update(s["name"].replace("@@", "@") for s in symbols(stub) if s["index"] != "UND")
     unresolved = sorted(s["name"] for s in entries if s["index"] == "UND" and s["bind"] != "WEAK" and s["name"].replace("@@", "@") not in available)
     assert not unresolved, unresolved
+    optional = sorted(s["name"] for s in entries if s["index"] == "UND" and s["bind"] == "WEAK" and s["name"].replace("@@", "@") not in available)
+    # compiler-rt's Android FMV resolver checks only its address as an API>=30
+    # marker; when absent it returns without calling it. Source and actual
+    # resolver/GOT disassembly were reviewed; see the build recipe.
+    assert set(optional) <= {"memfd_create"}, "Unreviewed weak API imports: " + str(optional)
     report = {"engine_revision": manifest["engine_revision"], "engine_run": manifest["run_url"],
               "bridge_sha256": hashlib.sha256(data).hexdigest(), "apk_sha256": hashlib.sha256(APK.read_bytes()).hexdigest(),
               "exports": exported, "needed": needed, "unresolved_strong_imports_api28": unresolved,
+              "optional_api_marker_imports": optional,
               "load_alignments": elf_load_alignments(data), "symbolic": True, "textrel": False,
               "source_sha256": hashlib.sha256((root / "jni/embedpdf_signature.cpp").read_bytes()).hexdigest(),
               "version_script_sha256": hashlib.sha256((root / "jni/exports.map").read_bytes()).hexdigest(),
               "engine_manifest_sha256": hashlib.sha256((root / "ENGINE.json").read_bytes()).hexdigest()}
+    report["static_archive_sha256"] = manifest["files"]["lib/arm64-v8a/libembedpdf_engine.a"]
+    report["link_runtime_sha256"] = {name: value for name, value in manifest["files"].items() if name.startswith("lib/") and not name.endswith("libembedpdf_engine.a")}
     (target.parent / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
-    print("PASS: EmbedPDF ARM64 provenance, JNI-only exports, local binding, PIC, platform-only dependencies and API 28 imports")
+    print("PASS: EmbedPDF ARM64 provenance, JNI-only exports, local binding, PIC, platform-only dependencies, API 28 strong imports and reviewed optional API marker")
 
 
 def elf_load_alignments(data):

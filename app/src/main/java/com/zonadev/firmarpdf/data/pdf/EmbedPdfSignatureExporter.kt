@@ -162,6 +162,7 @@ class EmbedPdfSignatureExporter(
                     catch (_: Exception) { published.copy(recorded = false) }
                     catch (_: OutOfMemoryError) { published.copy(recorded = false) }
                 } finally { historyNanos += SystemClock.elapsedRealtimeNanos() - historyClock }
+                job.ensureActive()
                 success = true
                 failure = "NONE"
                 result

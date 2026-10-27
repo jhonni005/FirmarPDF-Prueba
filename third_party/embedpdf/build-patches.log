@@ -1,0 +1,33 @@
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+index b87171a..ce79728 100644
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -384,6 +384,7 @@ static_library("redaction_pathops") {
+   deps = [ ":skia_opts" ]
+ }
+ 
++if (pdf_use_skia) {
+ component("skia") {
+   deps = []
+ 
+@@ -595,6 +596,8 @@ component("skia") {
+   }
+ }
+ 
++}  # pdf_use_skia
++
+ # Template for things that are logically part of :skia, but need to be split out
+ # so custom compile flags can be applied.
+ #
+@@ -671,11 +674,6 @@ skia_source_set("skia_opts") {
+     # assert(false, "Unsupported target CPU " + current_cpu)
+   }
+ 
+-  if (is_android && !is_debug) {
+-    configs -= [ "//build/config/compiler:default_optimization" ]
+-    configs += [ "//build/config/compiler:optimize_max" ]
+-  }
+-
+   visibility = [
+     ":redaction_pathops",
+     ":skia",

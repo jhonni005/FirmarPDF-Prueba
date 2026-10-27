@@ -1,0 +1,7 @@
+# Preserve provenance bytes and hashes across Windows/Linux checkouts.
+include/** -text
+licenses/** -text
+*.log -text
+DEPS -text
+args.gn -text
+ENGINE.json -text

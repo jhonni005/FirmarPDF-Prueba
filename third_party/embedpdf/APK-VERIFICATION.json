@@ -1,0 +1,37 @@
+{
+  "engine_revision": "5f7608ba4a634c94cd718067d6b678a45ba89088",
+  "engine_run": "https://github.com/jhonni005/FirmarPDF-Prueba/actions/runs/40452489141",
+  "bridge_sha256": "c7fcac18bddac0d68974591f7b4bdf10143eb32e521732145439da06ea42c225",
+  "apk_sha256": "5ed95691f45a44ec6cdb54c6be40078c9ebfa9d9af90d075ccb0ffdaa88fd712",
+  "exports": [
+    "Java_com_zonadev_firmarpdf_data_pdf_EmbedPdfNativeBridge_nativeExport"
+  ],
+  "needed": [
+    "libandroid.so",
+    "libjnigraphics.so",
+    "liblog.so",
+    "libm.so",
+    "libdl.so",
+    "libc.so"
+  ],
+  "unresolved_strong_imports_api28": [],
+  "optional_api_marker_imports": [
+    "memfd_create"
+  ],
+  "load_alignments": [
+    16384,
+    16384,
+    16384
+  ],
+  "symbolic": true,
+  "textrel": false,
+  "source_sha256": "ba2bf851e60a1a0eb7e1bfea14846525670d1be44f9461e4ed1bca8734ee5d69",
+  "version_script_sha256": "8603d22ac4dea4075d619f29e05dcdb59e441f19ffb45515b5a2f5c4b7aebe77",
+  "engine_manifest_sha256": "3fa148a1dc9e1127ba4d03ffbc1f03dabeec08cf1d2073c65d80dafcb1d1eafc",
+  "static_archive_sha256": "5af092927e7c4f3317e8bc0f0c65b70bb24ef7f88aff85df902445724ae5a52f",
+  "link_runtime_sha256": {
+    "lib/arm64-v8a/libc++_static.a": "71fa8618e087652c7798bd33439cee372c697a049b48c5dfede1378af28cb9ce",
+    "lib/arm64-v8a/libc++abi.a": "6d5ae293f3b3952b75a88e478cd2056ceb8f7ca9ea2acb94685119e09cf7038a",
+    "lib/arm64-v8a/libclang_rt.builtins-aarch64-android.a": "32faf9cae893d732d45799f18040b90c69f847bc408d8207c6f65dd2c2f940e4"
+  }
+}
