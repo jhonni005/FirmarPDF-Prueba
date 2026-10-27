@@ -43,6 +43,11 @@ EOF
 cd "$work"
 gclient sync --nohooks --no-history --shallow --jobs=2 --revision "runtime@$revision"
 cd "$work/runtime"
+# The skia_source_set template already applies optimize_max inside source_set.
+# Its Android invoker duplicates that mutation before configs exists (GN error).
+# Build metadata only; preserve the template defaults and all engine algorithms.
+git apply --check "$script_dir/android-skia-gn.patch"
+git apply "$script_dir/android-skia-gn.patch"
 # The broad Chromium installer fetched an unrelated 32-bit/desktop stack for
 # >30 min in run 40444678413. Here only a native ARM64 library is built, with
 # NDK/sysroot/Clang pinned by DEPS. Inspect and install the host essentials only.
@@ -78,6 +83,7 @@ EOF
 gn gen "$out" --fail-on-unused-args
 gn args "$out" --list --short > "$work/gn-effective.log"
 gn desc "$out" //:pdfium > "$work/gn-target.log"
+git diff --binary > "$work/build-patches.log"
 ninja -C "$out" -j "$jobs" pdfium
 gclient revinfo -a > "$work/dependency-revisions.log"
 python3 "$script_dir/package_engine.py" --source "$work/runtime" --out "$work/runtime/$out" --destination "$package" --depot-revision "$depot_revision"

@@ -42,7 +42,7 @@ def main():
             shutil.copy2(path, target)
     shutil.copy2(src / 'DEPS', dest / 'DEPS')
     shutil.copy2(out / 'args.gn', dest / 'args.gn')
-    for name in ('gn-effective.log', 'gn-target.log', 'dependency-revisions.log'):
+    for name in ('gn-effective.log', 'gn-target.log', 'dependency-revisions.log', 'build-patches.log'):
         shutil.copy2(src.parent / name, dest / name)
     nm = src / 'third_party/llvm-build/Release+Asserts/bin/llvm-nm'
     symbols = subprocess.check_output([str(nm), '--defined-only', str(archive)], text=True, stderr=subprocess.DEVNULL)

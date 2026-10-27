@@ -1,0 +1,15 @@
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -671,11 +671,6 @@ skia_source_set("skia_opts") {
+     # assert(false, "Unsupported target CPU " + current_cpu)
+   }
+ 
+-  if (is_android && !is_debug) {
+-    configs -= [ "//build/config/compiler:default_optimization" ]
+-    configs += [ "//build/config/compiler:optimize_max" ]
+-  }
+-
+   visibility = [
+     ":redaction_pathops",
+     ":skia",

@@ -10,6 +10,7 @@ on:
       - .github/workflows/embedpdf-android-arm64.yml
       - tools/embedpdf-android/build.sh
       - tools/embedpdf-android/package_engine.py
+      - tools/embedpdf-android/android-skia-gn.patch
 
 permissions:
   contents: read
