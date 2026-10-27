@@ -34,8 +34,9 @@ def main():
     licenses.mkdir()
     for name in ('LICENSE', 'NOTICE'):
         shutil.copy2(src / name, licenses / name)
-    for path in (src / 'third_party').rglob('LICENSE*'):
-        if path.is_file() and '.git' not in path.parts:
+    for path in (src / 'third_party').rglob('*'):
+        legal = path.name.lower().startswith(('license', 'copying', 'copyright')) or path.name in ('FTL.TXT', 'GPLv2.TXT', 'NOTICE', 'NOTICE.txt')
+        if legal and path.is_file() and '.git' not in path.parts:
             target = licenses / path.relative_to(src)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)

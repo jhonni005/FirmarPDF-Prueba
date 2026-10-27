@@ -25,6 +25,9 @@ fi
 git -C "$work/depot_tools" fetch --depth=1 origin "$depot_revision"
 git -C "$work/depot_tools" checkout --detach "$depot_revision"
 export PATH="$work/depot_tools:$PATH"
+# DEPOT_TOOLS_UPDATE=0 deliberately skips the usual bootstrap too. Initialize
+# from this exact checkout, without updating its source revision.
+"$work/depot_tools/ensure_bootstrap"
 if [[ ! -d "$work/runtime/.git" ]]; then
   git init "$work/runtime"
   git -C "$work/runtime" remote add origin https://github.com/embedpdf/runtime.git
@@ -40,7 +43,12 @@ EOF
 cd "$work"
 gclient sync --nohooks --no-history --shallow --jobs=2 --revision "runtime@$revision"
 cd "$work/runtime"
-sudo build/install-build-deps.sh --android --no-prompt --no-chromeos-fonts
+# The broad Chromium installer fetched an unrelated 32-bit/desktop stack for
+# >30 min in run 40444678413. Here only a native ARM64 library is built, with
+# NDK/sysroot/Clang pinned by DEPS. Inspect and install the host essentials only.
+for tool in git python3 gcc g++ pkg-config; do command -v "$tool"; done
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends build-essential pkg-config zlib1g-dev libglib2.0-dev ninja-build
 gclient runhooks --jobs=2
 out=out/firmarpdf-arm64
 mkdir -p "$out"
