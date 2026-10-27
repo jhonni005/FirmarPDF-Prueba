@@ -1,7 +1,24 @@
 diff --git a/skia/BUILD.gn b/skia/BUILD.gn
 --- a/skia/BUILD.gn
 +++ b/skia/BUILD.gn
-@@ -671,11 +671,6 @@ skia_source_set("skia_opts") {
+@@ -384,6 +384,7 @@
+   deps = [ ":skia_opts" ]
+ }
+ 
++if (pdf_use_skia) {
+ component("skia") {
+   deps = []
+ 
+@@ -594,6 +595,8 @@
+     deps += [ "../third_party:png" ]
+   }
+ }
++
++}  # pdf_use_skia
+ 
+ # Template for things that are logically part of :skia, but need to be split out
+ # so custom compile flags can be applied.
+@@ -671,11 +674,6 @@
      # assert(false, "Unsupported target CPU " + current_cpu)
    }
  

@@ -45,6 +45,8 @@ gclient sync --nohooks --no-history --shallow --jobs=2 --revision "runtime@$revi
 cd "$work/runtime"
 # The skia_source_set template already applies optimize_max inside source_set.
 # Its Android invoker duplicates that mutation before configs exists (GN error).
+# Also gate the unused full renderer target on pdf_use_skia: its Android Expat
+# dependency is absent from this fork's DEPS. Keep redaction_pathops unaltered.
 # Build metadata only; preserve the template defaults and all engine algorithms.
 git apply --check "$script_dir/android-skia-gn.patch"
 git apply "$script_dir/android-skia-gn.patch"
