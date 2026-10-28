@@ -235,12 +235,24 @@ def verify_structure(original, delta, expect_stream, page_gen):
     old, result = PdfReader(io.BytesIO(original), strict=True), PdfReader(io.BytesIO(final), strict=True)
     xref = startxref(final)
     assert xref >= len(original)
-    assert result.trailer['/Prev'] == startxref(original)
-    assert result.trailer.raw_get('/Root') == old.trailer.raw_get('/Root') or (
-        result.trailer.raw_get('/Root').idnum, result.trailer.raw_get('/Root').generation) == (1, 7)
-    assert result.trailer.raw_get('/Info').generation == old.trailer.raw_get('/Info').generation
-    assert result.trailer['/ID'][0] == old.trailer['/ID'][0]
-    assert result.trailer['/Size'] >= old.trailer['/Size']
+    if expect_stream:
+        header = re.match(rb'(\d+) 0 obj\s*<<', final[xref:])
+        assert header, 'startxref must point exactly to the new stream object'
+        n = int(header.group(1))
+        # pypdf omits /Prev from its combined trailer for stream sections.
+        # Inspect the actual emitted stream dictionary, not that projection.
+        current_trailer = result.get_object(IndirectObject(n, 0, result))
+    else:
+        current_trailer = result.trailer
+    assert current_trailer['/Prev'] == startxref(original)
+    root = current_trailer.raw_get('/Root')
+    old_root = old.trailer.raw_get('/Root')
+    assert (root.idnum, root.generation) == (old_root.idnum, old_root.generation)
+    info = current_trailer.raw_get('/Info')
+    old_info = old.trailer.raw_get('/Info')
+    assert (info.idnum, info.generation) == (old_info.idnum, old_info.generation)
+    assert current_trailer['/ID'][0] == old.trailer['/ID'][0]
+    assert current_trailer['/Size'] >= old.trailer['/Size']
     assert len(result.pages) == len(old.pages)
     assert result.pages[0].indirect_reference.generation == page_gen
     assert len(result.pages[0].images) > len(old.pages[0].images)
@@ -256,11 +268,8 @@ def verify_structure(original, delta, expect_stream, page_gen):
         assert b'9 0 obj' not in delta
     assert original[:startxref(original)] in final  # Bytes copied without rewriting.
     if expect_stream:
-        header = re.match(rb'(\d+) 0 obj\s*<<', final[xref:])
-        assert header, 'startxref must point exactly to the new stream object'
-        n = int(header.group(1))
-        assert n == result.trailer['/Size'] - 1
-        obj = result.get_object(IndirectObject(n, 0, result))
+        obj = current_trailer
+        assert n == obj['/Size'] - 1
         assert obj['/Type'] == '/XRef' and list(obj['/W']) == [0, 4, 2]
         index = list(obj['/Index'])
         assert len(index) % 2 == 0
@@ -286,7 +295,7 @@ def verify_structure(original, delta, expect_stream, page_gen):
     # Selection stays small and never repeats the original content stream.
     assert b'q 0.2 0.6 0.2 rg 5 5 8 8 re f Q' not in delta
     return {'xref_format': 'stream' if expect_stream else 'table', 'startxref': xref,
-            'prev': startxref(original), 'delta_bytes': len(delta), 'size': result.trailer['/Size']}
+            'prev': startxref(original), 'delta_bytes': len(delta), 'size': current_trailer['/Size']}
 
 
 def download_readers(output):
@@ -340,6 +349,7 @@ def main():
             assert bool(source_reader.xref_objStm) == (kind in ('hybrid', 'objstm'))
             for revision in (1, 2):
                 delta, previous_count = api.sign(original, second=revision == 2)
+                (a.output / f'{kind}-revision-{revision}.pdf').write_bytes(original + delta)
                 row = verify_structure(original, delta, kind in ('stream', 'objstm'), generation)
                 row.update(case=kind, revision=revision, renderers=[])
                 final = original + delta
@@ -355,7 +365,6 @@ def main():
                     row['renderers'].append({'reader': label, 'objects_before': count_before,
                                              'objects_after': count_after,
                                              'changed_pixels': sum(before[i:i+4] != after[i:i+4] for i in range(0, len(before), 4))})
-                (a.output / f'{kind}-revision-{revision}.pdf').write_bytes(final)
                 report['cases'].append(row)
                 print(json.dumps(row), flush=True)
                 original = final
