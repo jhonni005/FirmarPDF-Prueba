@@ -7,6 +7,10 @@ on:
         description: 'Retry host writer checks without rebuilding the Android artifact'
         type: boolean
         default: false
+      writer_library_run:
+        description: 'Reuse the linked Linux harness from an earlier run; no native compilation'
+        type: string
+        default: ''
   # Scoped bootstrap: a new manual workflow is not discoverable on main yet.
   # Never runs on main, app changes, PRs, or other branches.
   push:
@@ -22,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: embedpdf-arm64-${{ github.ref }}
@@ -29,6 +34,7 @@ concurrency:
 
 jobs:
   engine:
+    if: ${{ !inputs.writer_library_run }}
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     steps:
@@ -78,5 +84,31 @@ jobs:
           path: |
             ${{ runner.temp }}/embedpdf-arm64/*.log
             ${{ runner.temp }}/embedpdf-arm64/runtime/out/firmarpdf-arm64/args.gn
+          if-no-files-found: ignore
+          retention-days: 14
+  writer_library:
+    if: ${{ inputs.writer_library_run }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Reuse linked test library and run focused checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WRITER_LIBRARY_RUN: ${{ inputs.writer_library_run }}
+        run: |
+          python3 tools/embedpdf-android/github_actions.py download --run "$WRITER_LIBRARY_RUN"
+          writer_artifact=".gradle/embedpdf-android-artifacts/$WRITER_LIBRARY_RUN/embedpdf-writer-regressions-$WRITER_LIBRARY_RUN"
+          mkdir -p "$RUNNER_TEMP/writer-regressions"
+          cp "$writer_artifact/writer-source-hashes.json" "$RUNNER_TEMP/writer-regressions/"
+          python3 -m venv "$RUNNER_TEMP/writer-venv"
+          "$RUNNER_TEMP/writer-venv/bin/pip" install --disable-pip-version-check --no-cache-dir pypdf==6.21.2 pillow==12.0.0
+          "$RUNNER_TEMP/writer-venv/bin/python" tools/embedpdf-android/test_selective_xref.py --engine "$writer_artifact/libwriter_test.so" --output "$RUNNER_TEMP/writer-regressions" --download-readers
+      - name: Upload focused writer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: embedpdf-writer-regressions-${{ github.run_id }}
+          path: ${{ runner.temp }}/writer-regressions/
           if-no-files-found: ignore
           retention-days: 14

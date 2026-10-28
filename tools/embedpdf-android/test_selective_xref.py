@@ -300,11 +300,15 @@ def download_readers(output):
         data = urllib.request.urlopen(wheel['url'], timeout=60).read()
         assert hashlib.sha256(data).hexdigest() == wheel['digests']['sha256']
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
-            names = [n for n in archive.namelist() if n.endswith('/libpdfium.so')]
+            # The 1.0.0 Linux wheel calls its ELF simply "pdfium".
+            names = [n for n in archive.namelist() if Path(n).name in ('libpdfium.so', 'pdfium')]
             assert len(names) == 1
             native = archive.read(names[0])
+            assert native.startswith(b'\x7fELF')
             versions = {n: archive.read(n).decode() for n in archive.namelist()
                         if n.endswith(('version.json', 'version.py'))}
+        if version == '1.0.0':
+            assert any('V_LIBPDFIUM = 4943' in v for v in versions.values())
         path = output / ('reader-' + version + '.so')
         path.write_bytes(native)
         readers.append((version, API(path)))
