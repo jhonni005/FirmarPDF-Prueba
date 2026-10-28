@@ -265,7 +265,7 @@ def verify_structure(original, delta, expect_stream, page_gen):
         assert result.get_object(IndirectObject(number, 0, result)) is not None
     if 9 in old.xref_objStm:
         assert result.xref_objStm[9] == old.xref_objStm[9], 'Untouched compressed resource must still resolve from the original ObjStm'
-        assert b'9 0 obj' not in delta
+        assert not re.search(rb'(?m)^9 0 obj\b', delta)
     assert original[:startxref(original)] in final  # Bytes copied without rewriting.
     if expect_stream:
         obj = current_trailer
@@ -274,6 +274,8 @@ def verify_structure(original, delta, expect_stream, page_gen):
         index = list(obj['/Index'])
         assert len(index) % 2 == 0
         numbers = [number for begin, count in zip(index[::2], index[1::2]) for number in range(begin, begin + count)]
+        if 9 in old.xref_objStm:
+            assert 9 not in numbers, 'Untouched compressed resource must not be emitted again'
         payload = obj.get_data()
         assert len(payload) == len(numbers) * 6
         # Validate raw /Length too, independently of parser stream decoding.
