@@ -44,7 +44,12 @@ gn gen "$out" --fail-on-unused-args
 cp "$out/args.gn" "$work/writer-regressions/host-args.gn"
 git diff > "$work/writer-regressions/host-build-patches.log"
 ninja -C "$out" -j "${EMBEDPDF_BUILD_JOBS:-2}" pdfium
+cp "$out/obj/libembedpdf.a" "$work/writer-regressions/libwriter_test.a"
+# Match the Android bridge's reachability: retain only the C APIs exercised
+# here. Do not pull the fork's unused redaction entry points into the harness.
 third_party/llvm-build/Release+Asserts/bin/clang++ -fuse-ld=lld \
+    -Wl,--gc-sections,--no-undefined,-Bsymbolic \
+    -Wl,--version-script="$script_dir/writer-test-exports.map" \
     -shared -o "$out/libwriter_test.so" -Wl,--whole-archive "$out/obj/libembedpdf.a" \
     -Wl,--no-whole-archive -ldl -lpthread -lm -latomic
 cp "$out/libwriter_test.so" "$work/writer-regressions/"

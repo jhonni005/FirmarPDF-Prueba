@@ -1,0 +1,29 @@
+{
+  global:
+    EPDF_InitThread;
+    EPDF_ShutdownThread;
+    EPDF_LoadBaseDocument;
+    EPDF_ReleaseBaseDocument;
+    EPDFLayer_OpenLayer;
+    EPDFLayer_BeginTransaction;
+    EPDFLayer_CommitTransaction;
+    EPDFLayer_SaveDelta;
+    FPDF_LoadMemDocument64;
+    FPDF_CloseDocument;
+    FPDF_LoadPage;
+    FPDF_ClosePage;
+    FPDF_GetPageCount;
+    FPDFPage_CountObjects;
+    FPDFBitmap_Create;
+    FPDFBitmap_Destroy;
+    FPDFBitmap_GetBuffer;
+    FPDFBitmap_GetStride;
+    FPDFBitmap_FillRect;
+    FPDF_RenderPageBitmap;
+    FPDFPageObj_NewImageObj;
+    FPDFImageObj_SetBitmap;
+    FPDFImageObj_SetMatrix;
+    FPDFPage_InsertObject;
+    FPDFPage_GenerateContent;
+  local: *;
+};
