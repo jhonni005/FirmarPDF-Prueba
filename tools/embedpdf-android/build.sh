@@ -50,6 +50,8 @@ cd "$work/runtime"
 # Build metadata only; preserve the template defaults and all engine algorithms.
 git apply --check "$script_dir/android-skia-gn.patch"
 git apply "$script_dir/android-skia-gn.patch"
+git apply --check "$script_dir/selective-xref-format.patch"
+git apply "$script_dir/selective-xref-format.patch"
 # The broad Chromium installer fetched an unrelated 32-bit/desktop stack for
 # >30 min in run 40444678413. Here only a native ARM64 library is built, with
 # NDK/sysroot/Clang pinned by DEPS. Inspect and install the host essentials only.

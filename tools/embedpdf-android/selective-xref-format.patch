@@ -1,0 +1,116 @@
+--- a/core/fpdfapi/edit/cpdf_creator.h
++++ b/core/fpdfapi/edit/cpdf_creator.h
+@@ -147,6 +147,8 @@
+   // references written with their generations.
+   uint32_t GetObjectGeneration(uint32_t object_number) const override;
+   bool WriteReference(uint32_t object_number);
++  // Keep the final section's format, including a hybrid's primary table.
++  bool ShouldWriteXRefStream() const;
+ 
+   void RemoveSecurity();
+ 
+--- a/core/fpdfapi/edit/cpdf_creator.cpp
++++ b/core/fpdfapi/edit/cpdf_creator.cpp
+@@ -250,6 +250,9 @@
+ // its encryption key and the references it writes.
+ bool CPDF_Creator::WriteIndirectObj(uint32_t objnum, const CPDF_Object* pObj) {
+   const uint32_t generation = GetObjectGeneration(objnum);
++  if (generation > 65535) {
++    return false;
++  }
+   if (!archive_->WriteDWord(objnum) || !archive_->WriteString(" ") ||
+       !archive_->WriteDWord(generation) || !archive_->WriteString(" obj\r\n")) {
+     return false;
+@@ -391,7 +394,7 @@
+ // EmbedPDF(layer-save): refuse an offset a cross-reference entry can't hold;
+ // an append-only delta's offsets start where its base ends.
+ bool CPDF_Creator::CheckEmittedOffset(FX_FILESIZE offset) {
+-  if (offset <= kMaxFourByteXrefOffset) {
++  if (offset >= 0 && offset <= kMaxFourByteXrefOffset) {
+     return true;
+   }
+   failure_reason_ = FailureReason::kAppendOnlyOffsetTooLarge;
+@@ -605,10 +608,8 @@
+       return stage_;
+     }
+     xref_start_ = archive_->CurrentOffset();
+-    // EmbedPDF(layer-save): an append-only delta writes a cross-reference
+-    // table, never a stream.
+-    if (!is_incremental_ || is_incremental_append_only_ ||
+-        !parser_->IsXRefStream()) {
++    // Append-only changes which bytes are copied, not the xref format.
++    if (!ShouldWriteXRefStream()) {
+       if (!is_incremental_ || parser_->GetLastXRefOffset() == 0) {
+         // EmbedPDF(complete-xref): the subsection header is written with the
+         // entries (kWriteXrefsNotIncremental81).
+@@ -728,20 +729,45 @@
+   return stage_;
+ }
+ 
++bool CPDF_Creator::ShouldWriteXRefStream() const {
++  // IsXRefStream() describes the section reached by the final startxref.
++  // A hybrid has a primary table and stays on the table path; its /Prev
++  // retains access to the old /XRefStm and compressed objects. Do not copy
++  // that old /XRefStm into the new section or change incremental selection.
++  return is_incremental_ && parser_->IsXRefStream();
++}
++
+ CPDF_Creator::Stage CPDF_Creator::WriteDoc_Stage4() {
+   DCHECK_GE(stage_, Stage::kWriteTrailerAndFinish90);
+ 
+-  // EmbedPDF(layer-save): an append-only delta writes a cross-reference
+-  // table, never a stream.
+-  bool bXRefStream = is_incremental_ && !is_incremental_append_only_ &&
+-                     parser_->IsXRefStream();
++  const bool bXRefStream = ShouldWriteXRefStream();
++  // Reserve the stream's number and /Size before writing its object header.
++  // /W[0 4 2] has an implicit type 1: offsets and generations must fit,
++  // including the stream's own absolute offset. Never silently truncate.
++  FX_SAFE_UINT32 trailer_size = last_obj_num_;
++  trailer_size += bXRefStream ? 2 : 1;
++  if (!trailer_size.IsValid()) {
++    return Stage::kInvalid;
++  }
++  const uint32_t xref_object_number = bXRefStream ? last_obj_num_ + 1 : 0;
++  if (bXRefStream) {
++    if (!CheckEmittedOffset(xref_start_)) {
++      return Stage::kInvalid;
++    }
++    for (const auto& [object_number, offset] : object_offsets_) {
++      if (!CheckEmittedOffset(offset) ||
++          GetObjectGeneration(object_number) > 65535) {
++        return Stage::kInvalid;
++      }
++    }
++  }
+   if (!bXRefStream) {
+     if (!archive_->WriteString("trailer\r\n<<")) {
+       return Stage::kInvalid;
+     }
+   } else {
+     // EmbedPDF(bug-fix): the number the stream's own entry lists (below).
+-    if (!archive_->WriteDWord(last_obj_num_ + 1) ||
++    if (!archive_->WriteDWord(xref_object_number) ||
+         !archive_->WriteString(" 0 obj <<")) {
+       return Stage::kInvalid;
+     }
+@@ -781,11 +807,6 @@
+ 
+   // EmbedPDF(save-traversal): /Size can't overflow, and an incremental save
+   // never shrinks it below the input's.
+-  FX_SAFE_UINT32 trailer_size = last_obj_num_;
+-  trailer_size += bXRefStream ? 2 : 1;
+-  if (!trailer_size.IsValid()) {
+-    return Stage::kInvalid;
+-  }
+   uint32_t size = trailer_size.ValueOrDie();
+   if (is_incremental_) {
+     const int original_size =
+@@ -823,7 +844,6 @@
+     // (the trailer-end scanner, pyHanko) stop at a missing one. Include the
+     // xref stream's own entry. Two bytes cover every generation allowed by
+     // PDF, including generations above 255.
+-    const uint32_t xref_object_number = last_obj_num_ + 1;
+     object_offsets_[xref_object_number] = xref_start_;
+     if (!archive_->WriteString("/Type/XRef/W[0 4 2]/Index[")) {
+       return Stage::kInvalid;

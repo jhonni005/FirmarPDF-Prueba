@@ -51,6 +51,14 @@ def main():
     shutil.copy2(out / 'args.gn', dest / 'args.gn')
     for name in ('gn-effective.log', 'gn-target.log', 'dependency-revisions.log', 'build-patches.log'):
         shutil.copy2(src.parent / name, dest / name)
+    patch = Path(__file__).with_name('selective-xref-format.patch')
+    shutil.copy2(patch, dest / patch.name)
+    writer_sources = ('core/fpdfapi/edit/cpdf_creator.cpp', 'core/fpdfapi/edit/cpdf_creator.h')
+    source_audit = {}
+    for name in writer_sources:
+        base = subprocess.check_output(['git', '-C', str(src), 'show', revision + ':' + name])
+        source_audit[name] = {'base_sha256': hashlib.sha256(base).hexdigest(),
+                            'patched_sha256': hashlib.sha256((src / name).read_bytes()).hexdigest()}
     nm = src / 'third_party/llvm-build/Release+Asserts/bin/llvm-nm'
     symbols = subprocess.check_output([str(nm), '--defined-only', str(archive)], text=True, stderr=subprocess.DEVNULL)
     required = ['EPDF_InitThread', 'EPDF_ShutdownThread', 'EPDF_LoadBaseDocument', 'EPDFLayer_OpenLayer',
@@ -60,6 +68,9 @@ def main():
     runtime_symbols = subprocess.check_output([str(nm), '--defined-only', str(builtins[0])], text=True, stderr=subprocess.DEVNULL)
     assert all(any(line.split()[-1:] == [name] for line in runtime_symbols.splitlines()) for name in ('__arm_get_current_vg', '__arm_tpidr2_save'))
     manifest = {'engine_revision': revision, 'abi': 'arm64-v8a', 'min_sdk': 28,
+                'local_patches': [{'file': patch.name, 'sha256': hashlib.sha256(patch.read_bytes()).hexdigest(),
+                                   'purpose': 'Preserve source xref format in selective append-only saves',
+                                   'sources': source_audit}],
                 'depot_tools_revision': a.depot_revision, 'thread_local_globals': True,
                 'complete_archive': True, 'required_symbols_checked': required,
                 'compiler_runtime_origin': {

@@ -11,6 +11,9 @@ on:
       - tools/embedpdf-android/build.sh
       - tools/embedpdf-android/package_engine.py
       - tools/embedpdf-android/android-skia-gn.patch
+      - tools/embedpdf-android/selective-xref-format.patch
+      - tools/embedpdf-android/test_selective_xref.py
+      - tools/embedpdf-android/check_writer.sh
 
 permissions:
   contents: read
@@ -47,6 +50,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+      - name: Focused native writer regressions on Linux (no Android instrumentation)
+        env:
+          EMBEDPDF_BUILD_ROOT: ${{ runner.temp }}/embedpdf-arm64
+          EMBEDPDF_BUILD_JOBS: '2'
+        run: bash tools/embedpdf-android/check_writer.sh
+      - name: Upload synthetic writer regression evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: embedpdf-writer-regressions-${{ github.run_id }}
+          path: ${{ runner.temp }}/embedpdf-arm64/writer-regressions/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload diagnostics even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
