@@ -88,6 +88,10 @@ gn gen "$out" --fail-on-unused-args
 gn args "$out" --list --short > "$work/gn-effective.log"
 gn desc "$out" //:pdfium > "$work/gn-target.log"
 git diff --binary > "$work/build-patches.log"
+if [[ "${EMBEDPDF_TEST_ONLY:-0}" == 1 ]]; then
+  echo 'Writer-harness retry: reuse prior ARM64 artifact; do not rebuild/package Android.'
+  exit 0
+fi
 ninja -C "$out" -j "$jobs" pdfium
 gclient revinfo -a > "$work/dependency-revisions.log"
 python3 "$script_dir/package_engine.py" --source "$work/runtime" --out "$work/runtime/$out" --destination "$package" --depot-revision "$depot_revision"

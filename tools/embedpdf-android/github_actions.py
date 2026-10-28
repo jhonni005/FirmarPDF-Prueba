@@ -56,9 +56,11 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('command', choices=('status', 'dispatch', 'logs', 'download'))
     p.add_argument('--run', type=int)
+    p.add_argument('--writer-only', action='store_true', help='Dispatch only the disposable writer harness')
     a = p.parse_args()
     if a.command == 'dispatch':
-        api('/actions/workflows/' + WORKFLOW + '/dispatches', 'POST', {'ref': BRANCH})
+        api('/actions/workflows/' + WORKFLOW + '/dispatches', 'POST',
+            {'ref': BRANCH, 'inputs': {'writer_only': a.writer_only}})
         print('Manual workflow dispatched on authorized branch')
         return
     runs = api('/actions/runs?' + urllib.parse.urlencode({'branch': BRANCH, 'per_page': 5}))['workflow_runs']

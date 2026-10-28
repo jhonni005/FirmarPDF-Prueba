@@ -9,6 +9,23 @@ cd "$work/runtime"
 # Only the ARM64 archive produced by build.sh is packaged/imported into Android.
 out=out/firmarpdf-writer-test
 mkdir -p "$out" "$work/writer-regressions"
+exec > >(tee "$work/writer-regressions/build.log") 2>&1
+# This standalone fork's gn_check group references the disabled full Skia
+# renderer on Linux. Gate only that unused metadata dependency for the harness.
+# C++ sources remain byte-identical to the Android writer already packaged.
+python3 - <<'PY'
+from pathlib import Path
+import hashlib, json
+p = Path('BUILD.gn')
+old = 'if (defined(checkout_skia) && checkout_skia && !is_android && !is_wasm) {'
+new = 'if (pdf_use_skia && defined(checkout_skia) && checkout_skia && !is_android && !is_wasm) {'
+text = p.read_text()
+assert text.count(old) == 1
+p.write_text(text.replace(old, new))
+sources = ('core/fpdfapi/edit/cpdf_creator.cpp', 'core/fpdfapi/edit/cpdf_creator.h')
+Path('../writer-regressions/writer-source-hashes.json').write_text(json.dumps(
+    {name: hashlib.sha256(Path(name).read_bytes()).hexdigest() for name in sources}, indent=2) + '\n')
+PY
 sed -e 's/target_os="android"/target_os="linux"/' \
     -e 's/target_cpu="arm64"/target_cpu="x64"/' \
     -e '/default_min_sdk_version/d' out/firmarpdf-arm64/args.gn > "$out/args.gn"
@@ -17,6 +34,8 @@ use_sysroot=false
 use_glib=false
 EOF
 gn gen "$out" --fail-on-unused-args
+cp "$out/args.gn" "$work/writer-regressions/host-args.gn"
+git diff > "$work/writer-regressions/host-build-patches.log"
 ninja -C "$out" -j "${EMBEDPDF_BUILD_JOBS:-2}" pdfium
 g++ -shared -o "$out/libwriter_test.so" -Wl,--whole-archive "$out/obj/libembedpdf.a" \
     -Wl,--no-whole-archive -ldl -lpthread -lm

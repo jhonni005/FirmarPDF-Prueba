@@ -154,7 +154,7 @@ def stream(data, fields=b''):
 class Fixture:
     def __init__(self):
         self.data = bytearray(b'%PDF-1.7\n%\xe2\xe3\xcf\xd3\n')
-        self.entries = {}
+        self.entries = {0: (0, 0, 65535)}
 
     def obj(self, n, body, gen=0):
         self.entries[n] = (1, len(self.data), gen)
@@ -162,10 +162,16 @@ class Fixture:
 
     def table(self, prev=None, hybrid=None):
         pos = len(self.data)
-        self.data.extend(b'xref\n0 1\n0000000000 65535 f \n')
-        for n, (kind, offset, gen) in sorted(self.entries.items()):
-            if kind == 1:
-                self.data.extend(f'{n} 1\n{offset:010d} {gen:05d} n \n'.encode())
+        if prev is None and hybrid is None:
+            self.data.extend(b'xref\n0 10\n')
+            for n in range(10):
+                kind, offset, gen = self.entries.get(n, (0, 0, 0))
+                self.data.extend(f'{offset:010d} {gen:05d} {"n" if kind else "f"} \n'.encode())
+        else:
+            self.data.extend(b'xref\n0 1\n0000000000 65535 f \n')
+            for n, (kind, offset, gen) in sorted(self.entries.items()):
+                if kind == 1:
+                    self.data.extend(f'{n} 1\n{offset:010d} {gen:05d} n \n'.encode())
         trailer = b' /Root 1 7 R /Info 6 259 R /ID [<1234><5678>] /Size 10'
         if prev is not None:
             trailer += f' /Prev {prev}'.encode()
@@ -177,7 +183,8 @@ class Fixture:
     def xref(self, finish=True, only=None):
         pos = len(self.data)
         self.entries[8] = (1, pos, 0)
-        entries = {n: v for n, v in self.entries.items() if only is None or n in only}
+        entries = ({n: self.entries.get(n, (0, 0, 0)) for n in range(10)} if only is None else
+                   {n: v for n, v in self.entries.items() if n in only})
         fields = b' /Type /XRef /W [1 4 2] /Root 1 7 R /Info 6 259 R /ID [<1234><5678>] /Size 10 /Index ['
         fields += b' '.join(f'{n} 1'.encode() for n in sorted(entries)) + b']'
         payload = b''.join(bytes([kind]) + offset.to_bytes(4, 'big') + gen.to_bytes(2, 'big')
