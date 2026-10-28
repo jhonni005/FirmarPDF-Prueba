@@ -21,7 +21,13 @@ old = 'if (defined(checkout_skia) && checkout_skia && !is_android && !is_wasm) {
 new = 'if (pdf_use_skia && defined(checkout_skia) && checkout_skia && !is_android && !is_wasm) {'
 text = p.read_text()
 assert text.count(old) == 1
-p.write_text(text.replace(old, new))
+text = text.replace(old, new)
+# The fork relies on transitive stdint.h includes from Android's libc++.
+# Force the standard header for the system-libstdc++ host harness only.
+old_config = 'config("pdfium_common_config") {\n  cflags = []'
+assert text.count(old_config) == 1
+text = text.replace(old_config, 'config("pdfium_common_config") {\n  cflags = [ "-include", "stdint.h" ]')
+p.write_text(text)
 sources = ('core/fpdfapi/edit/cpdf_creator.cpp', 'core/fpdfapi/edit/cpdf_creator.h')
 Path('../writer-regressions/writer-source-hashes.json').write_text(json.dumps(
     {name: hashlib.sha256(Path(name).read_bytes()).hexdigest() for name in sources}, indent=2) + '\n')
@@ -32,13 +38,16 @@ sed -e 's/target_os="android"/target_os="linux"/' \
 cat >> "$out/args.gn" <<EOF
 use_sysroot=false
 use_glib=false
+icu_use_data_file=false
 EOF
 gn gen "$out" --fail-on-unused-args
 cp "$out/args.gn" "$work/writer-regressions/host-args.gn"
 git diff > "$work/writer-regressions/host-build-patches.log"
 ninja -C "$out" -j "${EMBEDPDF_BUILD_JOBS:-2}" pdfium
-g++ -shared -o "$out/libwriter_test.so" -Wl,--whole-archive "$out/obj/libembedpdf.a" \
-    -Wl,--no-whole-archive -ldl -lpthread -lm
+third_party/llvm-build/Release+Asserts/bin/clang++ -fuse-ld=lld \
+    -shared -o "$out/libwriter_test.so" -Wl,--whole-archive "$out/obj/libembedpdf.a" \
+    -Wl,--no-whole-archive -ldl -lpthread -lm -latomic
+cp "$out/libwriter_test.so" "$work/writer-regressions/"
 python3 -m venv "$work/writer-venv"
 "$work/writer-venv/bin/pip" install --disable-pip-version-check pypdf==6.21.2 pillow==12.0.0
 "$work/writer-venv/bin/python" "$script_dir/test_selective_xref.py" \
